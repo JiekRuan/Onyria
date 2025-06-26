@@ -13,14 +13,11 @@
         <button type="submit">Analyser</button>
     </form>
 
-    {% if result %}
-        <h2>Émotions détectées :</h2>
-        <ul>
-            {% for key, val in result.items %}
-                <li>{{ key }} : {{ val|floatformat:2 }}</li>
-            {% endfor %}
-        </ul>
+    {% if dominant_emotion %}
+        <h3>Émotion dominante</h3>
+        <p>{{ dominant_emotion.0|capfirst }} ({{ dominant_emotion.1|floatformat:2 }})</p>
     {% endif %}
+
 
     {% if dream_type %}
         <h2>Type de rêve : {{ dream_type }}</h2>

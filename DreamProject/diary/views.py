@@ -90,6 +90,7 @@ def prompt_to_image(prompt):
 
 def analyser_texte_view(request):
     result = None
+    dominant_emotion = None
     dream_type = None
     interpretation = None
     image_path = None
@@ -108,6 +109,7 @@ def analyser_texte_view(request):
             response_format={"type": "json_object"},
         )
         result = softmax(json.loads(emotions_resp.choices[0].message.content))
+        dominant_emotion = max(result.items(), key=lambda x: x[1])
         dream_type = classify_dream_from_emotions(result)
         interpretation = interpret_dream_with_ai(user_text)
 
@@ -124,8 +126,10 @@ def analyser_texte_view(request):
 
     return render(request, "diary/models.html", {
         "result": result,
+        "dominant_emotion": dominant_emotion,
         "dream_type": dream_type,
         "interpretation": interpretation,
         "image_path": image_path,
         "texte": user_text,
     })
+
