@@ -15,20 +15,31 @@
 
   <div id="status" style="display: none"></div>
 
-  <h2>Transcription :</h2>
-  <div id="transcriptionText"></div>
+  <!-- Zones masquées par défaut -->
+  <div id="sectionTranscription" style="display: none;">
+    <h2>Transcription :</h2>
+    <div id="transcriptionText"></div>
+  </div>
 
-  <h3>Émotion dominante</h3>
-  <div id="emotionDominante"></div>
+  <div id="sectionEmotion" style="display: none;">
+    <h3>Émotion dominante</h3>
+    <div id="emotionDominante"></div>
+  </div>
 
-  <h3>Type de rêve</h3>
-  <div id="dreamType"></div>
+  <div id="sectionDreamType" style="display: none;">
+    <h3>Type de rêve</h3>
+    <div id="dreamType"></div>
+  </div>
 
-  <h3>Interprétation</h3>
-  <div id="interpretation"></div>
+  <div id="sectionInterpretation" style="display: none;">
+    <h3>Interprétation</h3>
+    <div id="interpretation"></div>
+  </div>
 
-  <h3>Image générée</h3>
-  <div id="imageRevee"></div>
+  <div id="sectionImage" style="display: none;">
+    <h3>Image générée</h3>
+    <div id="imageRevee"></div>
+  </div>
 
   <script>
     let mediaRecorder;
@@ -41,11 +52,19 @@
     const timer = document.getElementById("timer");
     const timerText = document.getElementById("timerText");
     const status = document.getElementById("status");
+
     const transcriptionText = document.getElementById("transcriptionText");
     const emotionDominante = document.getElementById("emotionDominante");
     const dreamType = document.getElementById("dreamType");
     const interpretation = document.getElementById("interpretation");
     const imageRevee = document.getElementById("imageRevee");
+
+    // Sections
+    const sectionTranscription = document.getElementById("sectionTranscription");
+    const sectionEmotion = document.getElementById("sectionEmotion");
+    const sectionDreamType = document.getElementById("sectionDreamType");
+    const sectionInterpretation = document.getElementById("sectionInterpretation");
+    const sectionImage = document.getElementById("sectionImage");
 
     recordBtn.addEventListener("click", toggleRecording);
 
@@ -116,19 +135,29 @@
         const result = await response.json();
 
         if (result.success) {
+          // Transcription
           transcriptionText.textContent = result.transcription;
+          sectionTranscription.style.display = "block";
 
+          // Émotion dominante
           emotionDominante.textContent = `${capitalize(result.dominant_emotion[0])} (${(result.dominant_emotion[1] * 100).toFixed(1)}%)`;
+          sectionEmotion.style.display = "block";
 
+          // Type de rêve
           dreamType.textContent = result.dream_type;
+          sectionDreamType.style.display = "block";
 
+          // Interprétation
           interpretation.innerHTML = "";
           for (const [key, val] of Object.entries(result.interpretation)) {
             interpretation.innerHTML += `<p><strong>${capitalize(key)}</strong> : ${val}</p>`;
           }
+          sectionInterpretation.style.display = "block";
 
+          // Image
           if (result.image_path) {
             imageRevee.innerHTML = `<img src="/static/${result.image_path}" alt="Image du rêve" style="max-width: 600px;" />`;
+            sectionImage.style.display = "block";
           }
 
           showStatus("Analyse terminée !");
