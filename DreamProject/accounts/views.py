@@ -8,10 +8,10 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return render(request, 'home.html', {'user': request.user})  # 'home' doit correspondre au nom dans urls.py
+            return redirect('accounts:home')  # redirection propre
     else:
         form = RegisterForm()
-    return render(request, 'register.html', {'form': form})
+    return render(request, 'accounts/register.html', {'form': form})
 
 def login_view(request):
     if request.method == 'POST':
@@ -22,14 +22,14 @@ def login_view(request):
             user = authenticate(request, email=email, password=password)
             if user:
                 login(request, user)
-                return render(request, 'home.html', {'user': request.user})
+                return redirect('accounts:home')
     else:
         form = LoginForm()
-    return render(request, 'login.html', {'form': form})
+    return render(request, 'accounts/login.html', {'form': form})
 
 def home_view(request):
-    return render(request, 'home.html', {'user': request.user})
+    return render(request, 'accounts/home.html', {'user': request.user})
 
 def logout_view(request):
     logout(request)
-    return login_view(request)
+    return redirect('accounts:login')
