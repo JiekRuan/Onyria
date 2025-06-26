@@ -1,6 +1,7 @@
 <h2>Bienvenue {{ user.username }}!</h2>
 <p>Email : {{ user.email }}</p>
-<form action="{% url 'accounts:logout' %}" method="post">
+<form action="{% url 'logout' %}" method="post">
     {% csrf_token %}
     <button type="submit">Déconnexion</button>
 </form>
+<a href="{% url 'password_change' %}">Change Password</a>

@@ -1,11 +1,12 @@
 from django.urls import path
-from . import views
-
-app_name = 'accounts'
+from .views import register_view, login_view, profil_view, logout_view, CustomPasswordChangeView
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path('register/', views.register_view, name='register'),
-    path('', views.login_view, name='login'),
-    path('home/', views.home_view, name='home'),
-    path('logout/', views.logout_view, name='logout'),
+    path('register/', register_view, name='register'),
+    path('', login_view, name='login'),
+    path('profil/', profil_view, name='profil'),
+    path('logout/', logout_view, name='logout'),
+    path('password-change/', CustomPasswordChangeView.as_view(), name='password_change'),
+    path('password-change/done/', auth_views.PasswordChangeDoneView.as_view(template_name='password_change_done.html'), name='password_change_done'),
 ]
