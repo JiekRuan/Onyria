@@ -1,7 +1,7 @@
 from django.urls import path
+# from .views import accueil_view
+from .views import analyser_texte_view
 
-from . import views
-app_name = "diary"
 urlpatterns = [
-    path("", views.index, name="index"),
-    ]
+    path('', analyser_texte_view, name='diary')
+]

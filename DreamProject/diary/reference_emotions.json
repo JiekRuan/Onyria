@@ -1,0 +1,4 @@
+{
+    "positif" : ["heureux", "serein", "surpris"],
+    "negatif" : ["en_colere", "anxieux", "triste", "fatigue", "apeure"]
+}
