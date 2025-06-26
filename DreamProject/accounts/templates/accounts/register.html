@@ -1,7 +1,45 @@
-<h2>Inscription</h2>
-<form method="post">
+{% extends "accounts/base.html" %}
+{% load widget_tweaks %}
+{% load static %}
+
+{% block title %}Inscription{% endblock %}
+
+{% block content %}
+
+<!-- Logo Onyria -->
+<img src="{% static 'Logo_ONYRIA.png' %}" alt="Logo" class="mx-auto mb-4" style="width: 9rem;">
+
+<!-- Titre -->
+<h2 class="text-3xl font-bold mb-6 text-center text-[#7961dd]">Inscription</h2>
+
+<!-- Formulaire -->
+<form method="post" class="space-y-5">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">S'inscrire</button>
+    {{ form.non_field_errors }}
+
+    {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium mb-1">
+                {{ field.label }}
+            </label>
+            {{ field|add_class:"w-full px-4 py-2 bg-white/70 border border-[#cfc3f9] rounded placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7961dd]" }}
+            {% if field.errors %}
+                <p class="text-red-500 text-sm mt-1">{{ field.errors|striptags }}</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <!-- Bouton -->
+    <button type="submit"
+            class="w-full bg-[#7961dd] hover:bg-[#6751c7] text-white font-semibold py-2 px-4 rounded shadow transition duration-200">
+        S'inscrire
+    </button>
 </form>
-<p>Déjà inscrit? <a href="{% url 'login' %}">Se connecter</a></p>
+
+<!-- Lien connexion -->
+<p class="mt-6 text-center text-sm text-gray-600">
+    Déjà inscrit ?
+    <a href="{% url 'login' %}" class="text-[#7961dd] hover:underline">Se connecter</a>
+</p>
+
+{% endblock %}
