@@ -27,7 +27,7 @@ def read_file(filename):
 
 def classify_dream_from_emotions(emotions):
     base_dir = os.path.dirname(__file__)
-    ref_path = os.path.join(base_dir, "reference_emotions.json")
+    ref_path = os.path.join(base_dir, "prompt/reference_emotions.json")
 
     with open(ref_path, "r", encoding="utf-8") as file:
         reference_emotions_dict = json.load(file)
@@ -61,7 +61,7 @@ def analyser_texte_view(request):
             chat_response = mistral_client.chat.complete(
                 model="mistral-large-latest",
                 messages=[
-                    {"role": "system", "content": read_file("context_emotion.txt")},
+                    {"role": "system", "content": read_file("prompt/context_emotion.txt")},
                     {"role": "user", "content": user_text},
                 ],
                 response_format={"type": "json_object"},
@@ -95,7 +95,7 @@ def interpret_dream_with_ai(dream_text):
         messages=[
             {
                 "role": "system",
-                "content": read_file("context_interpretation.txt"),
+                "content": read_file("prompt/context_interpretation.txt"),
             },
             {
                 "role": "user",
