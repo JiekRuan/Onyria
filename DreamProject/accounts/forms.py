@@ -3,12 +3,16 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser
 
 class RegisterForm(UserCreationForm):
-    email = forms.EmailField(max_length=254, help_text='Required. Valid email address.')
+    email = forms.EmailField(label="Adresse mail")
+    username = forms.CharField(label="Nom d’utilisateur")
+    password1 = forms.CharField(label="Mot de passe", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Confirmation du mot de passe", widget=forms.PasswordInput)
 
     class Meta:
         model = CustomUser
         fields = ('email', 'username', 'password1', 'password2')
 
+
 class LoginForm(forms.Form):
-    email = forms.EmailField()
-    password = forms.CharField(widget=forms.PasswordInput)
+    email = forms.EmailField(label="Adresse mail")
+    password = forms.CharField(label="Mot de passe", widget=forms.PasswordInput)
