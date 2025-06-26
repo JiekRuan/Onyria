@@ -4,6 +4,7 @@ import math
 from datetime import datetime
 from dotenv import load_dotenv
 
+from django.contrib.auth.decorators import login_required  # <- Ajoutez cette ligne
 from django.shortcuts import render
 from django.shortcuts import render, get_object_or_404, reverse
 from .models import Dream
