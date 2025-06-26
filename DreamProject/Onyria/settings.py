@@ -11,8 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-import os
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -42,7 +40,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'widget_tweaks',
     "accounts",
-    "diary",
 ]
 
 MIDDLEWARE = [
@@ -135,6 +132,3 @@ AUTH_USER_MODEL = 'accounts.CustomUser'  # Modèle personnalisé
 
 LOGIN_REDIRECT_URL = 'profil'  # Doit correspondre au nom d'URL
 LOGOUT_REDIRECT_URL = 'login'
-
-MEDIA_URL = '/generated_images/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'generated_images')
