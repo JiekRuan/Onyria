@@ -1,4 +1,48 @@
-venv
+# === ENVIRONNEMENT PYTHON ===
 .venv/
-echo ".venv/" >> .gitignore
+venv/
+env/
+ENV/
 
+# === FICHIERS DJANGO ===
+*.log
+*.pot
+*.pyc
+__pycache__/
+db.sqlite3
+db.sqlite3-journal
+
+# === CONFIG & SÉCURITÉ ===
+*.env
+*.secret
+secrets.json
+
+# === SYSTEME & OS ===
+.DS_Store
+Thumbs.db
+
+# === IDE ===
+.vscode/
+.idea/
+
+# === TESTS & CACHES ===
+.coverage
+htmlcov/
+*.cover
+*.py,cover
+.tox/
+.cache/
+nosetests.xml
+coverage.xml
+*.mo
+
+# === STATIC & MEDIA ===
+staticfiles/
+media/
+
+# === MIGRATIONS TEMPORAIRES ===
+**/migrations/*.pyc
+**/migrations/__pycache__/
+**/migrations/*.pyc
+# garder les init uniquement si vide sinon :
+# **/migrations/
