@@ -5,7 +5,6 @@ from django.contrib.auth.models import User
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
 
-
 def register_view(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
