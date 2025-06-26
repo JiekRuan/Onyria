@@ -1,4 +1,17 @@
-venv
+# Environnement virtuel
 .venv/
-echo ".venv/" >> .gitignore
+venv/
 
+# Base de données SQLite
+db.sqlite3
+
+# Fichiers de l'OS
+.DS_Store
+
+# Fichiers Python compilés
+__pycache__/
+*.pyc
+
+# Dossiers de l'éditeur
+.vscode/
+.idea/
