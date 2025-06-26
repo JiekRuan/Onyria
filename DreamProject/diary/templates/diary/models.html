@@ -3,41 +3,41 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Analyse de texte</title>
+    <title>Analyse du rêve</title>
 </head>
 <body>
-    <h1>Analyse de ton texte</h1>
-
+    <h1>Décris ton rêve</h1>
     <form method="post">
         {% csrf_token %}
-        <textarea name="texte" rows="10" cols="80">{{ texte }}</textarea><br>
+        <textarea name="texte" rows="8" cols="80">{{ texte }}</textarea><br>
         <button type="submit">Analyser</button>
     </form>
 
-    {% if dominant_emotion %}
-    <h2>Émotion dominante :</h2>
-    <p>{{ dominant_emotion.0 }} : {{ dominant_emotion.1|floatformat:2 }}</p>
+    {% if result %}
+        <h2>Émotions détectées :</h2>
+        <ul>
+            {% for key, val in result.items %}
+                <li>{{ key }} : {{ val|floatformat:2 }}</li>
+            {% endfor %}
+        </ul>
     {% endif %}
 
     {% if dream_type %}
-    <h2>Type de rêve :</h2>
-    <p>{{ dream_type }}</p>
+        <h2>Type de rêve : {{ dream_type }}</h2>
     {% endif %}
 
     {% if interpretation %}
-    <h2>Interprétation du rêve :</h2>
-    <ul>
-        {% for key, value in interpretation.items %}
-            <li><strong>{{ key|capfirst }} :</strong> {{ value }}</li>
-        {% endfor %}
-    </ul>
+        <h2>Interprétation :</h2>
+        <ul>
+            {% for key, val in interpretation.items %}
+                <li><strong>{{ key|capfirst }}</strong> : {{ val }}</li>
+            {% endfor %}
+        </ul>
     {% endif %}
-
 
     {% if image_path %}
-    <h2>Image générée :</h2>
-    <img src="{% static image_path %}" alt="Image générée" style="max-width: 600px;">
+        <h2>Image du rêve :</h2>
+        <img src="/static/{{ image_path }}" alt="Rêve généré" style="max-width: 600px;">
     {% endif %}
-    
 </body>
 </html>
