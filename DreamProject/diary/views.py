@@ -5,6 +5,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, reverse
+from .models import Dream
+
 
 from groq import Groq
 from mistralai import Mistral
@@ -185,3 +188,9 @@ def interpret_dream_view(request):
         except Exception as e:
             return render(request, "error.html", {"message": str(e)})
     return render(request, "form_interpretation.html")
+
+@login_required
+def index(request):
+    dreams_history = Dream.objects.filter(user=request.user)
+    context = {"List of dreams": dreams_history}
+    return render(request, "diary/index.html", context)
