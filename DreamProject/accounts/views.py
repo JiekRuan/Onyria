@@ -12,7 +12,7 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return render(request, 'accounts/profil.html', {'user': request.user})
+            return redirect('/diary/record/')        
         else:
             # Si le formulaire n'est pas valide, on le renvoie avec les erreurs
             return render(request, 'accounts/register.html', {'form': form})
@@ -29,7 +29,7 @@ def login_view(request):
             user = authenticate(request, email=email, password=password)
             if user is not None:
                 login(request, user)
-                return render(request, 'accounts/profil.html', {'user': request.user})
+                return redirect('/diary/record/')
             else:
                 # Si l'authentification échoue, on renvoie un message d'erreur
                 form.add_error(None, "Email ou mot de passe incorrect")
