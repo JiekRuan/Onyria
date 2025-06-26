@@ -1,10 +1,9 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.views import PasswordChangeView
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.urls import reverse_lazy
-from .forms import RegisterForm, LoginForm
+from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
 
 
 def register_view(request):
@@ -49,9 +48,17 @@ def logout_view(request):
     logout(request)
     return redirect('login')  # Redirige vers la page de login après la déconnexion
 
-class CustomPasswordChangeView(PasswordChangeView):
-    template_name = 'accounts/change_password.html'
-    success_url = reverse_lazy('password_change_done')
+@login_required
+def custom_password_change_view(request):
+    if request.method == 'POST':
+        form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('password_change_done')
+    else:
+        form = CustomPasswordChangeForm(user=request.user)
+    return render(request, 'accounts/change_password.html', {'form': form})
+
 
 @login_required
 def delete_account_view(request):
