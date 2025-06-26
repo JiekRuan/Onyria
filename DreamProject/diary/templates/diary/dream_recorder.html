@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enregistreur Vocal</title>
+  </head>
+  <body>
+    <h1>Enregistreur Vocal</h1>
+    <p>Cliquez pour enregistrer, re-cliquez pour arrêter</p>
+
+    <button id="recordBtn">🎤 Enregistrer</button>
+
+    <div id="timer" style="display: none">
+      Temps: <span id="timerText">00:00</span>
+    </div>
+
+    <div id="status" style="display: none"></div>
+
+    <h3>Transcription :</h3>
+    <div id="transcriptionText">La transcription apparaîtra ici...</div>
+
+    <script>
+      let mediaRecorder;
+      let audioChunks = [];
+      let isRecording = false;
+      let startTime;
+      let timerInterval;
+
+      const recordBtn = document.getElementById("recordBtn");
+      const timer = document.getElementById("timer");
+      const timerText = document.getElementById("timerText");
+      const status = document.getElementById("status");
+      const transcriptionText = document.getElementById("transcriptionText");
+
+      recordBtn.addEventListener("click", toggleRecording);
+
+      async function toggleRecording() {
+        if (!isRecording) {
+          await startRecording();
+        } else {
+          stopRecording();
+        }
+      }
+
+      async function startRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+          };
+
+          mediaRecorder.onstop = processRecording;
+
+          mediaRecorder.start();
+          isRecording = true;
+
+          // UI
+          recordBtn.textContent = "⏹️ Arrêter";
+          timer.style.display = "block";
+
+          // Timer
+          startTime = Date.now();
+          timerInterval = setInterval(updateTimer, 1000);
+
+          showStatus("Enregistrement en cours...");
+        } catch (err) {
+          showStatus("Erreur: Impossible d'accéder au microphone");
+        }
+      }
+
+      function stopRecording() {
+        if (mediaRecorder && isRecording) {
+          mediaRecorder.stop();
+          mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+
+          isRecording = false;
+          clearInterval(timerInterval);
+
+          recordBtn.textContent = "⏳ Traitement...";
+          timer.style.display = "none";
+
+          showStatus("Traitement en cours...");
+        }
+      }
+
+      function updateTimer() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        timerText.textContent = `${minutes
+          .toString()
+          .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+      }
+
+      async function processRecording() {
+        try {
+          const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+
+          const formData = new FormData();
+          formData.append("audio", audioBlob);
+
+          const response = await fetch("/diary/transcribe/", {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            transcriptionText.textContent = result.transcription;
+            showStatus("Transcription terminée !");
+          } else {
+            showStatus("Erreur: " + result.error);
+          }
+        } catch (err) {
+          showStatus("Erreur: " + err.message);
+        }
+
+        // Reset
+        recordBtn.textContent = "🎤 Enregistrer";
+      }
+
+      function showStatus(message) {
+        status.textContent = message;
+        status.style.display = "block";
+
+        setTimeout(() => {
+          status.style.display = "none";
+        }, 5000);
+      }
+
+      // Test microphone au chargement
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((stream) => {
+          stream.getTracks().forEach((track) => track.stop());
+          showStatus("Microphone prêt !");
+        })
+        .catch((err) => {
+          showStatus("Erreur: Microphone non accessible");
+          recordBtn.disabled = true;
+        });
+    </script>
+  </body>
+</html>
