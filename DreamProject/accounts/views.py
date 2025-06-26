@@ -1,8 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm
+
 
 def register_view(request):
     if request.method == 'POST':
@@ -49,3 +52,12 @@ def logout_view(request):
 class CustomPasswordChangeView(PasswordChangeView):
     template_name = 'change_password.html'
     success_url = reverse_lazy('password_change_done')
+
+@login_required
+def delete_account_view(request):
+    if request.method == 'POST':
+        user = request.user
+        user.delete()
+        logout(request)
+        return redirect('login')  # Redirige vers la page d'accueil après la suppression du compte
+    return render(request, 'delete_account.html')
