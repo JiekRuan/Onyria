@@ -120,7 +120,7 @@ def classify_dream_from_emotions(emotions):
 
 
 def home(request):
-    return render(request, 'diary/home.html')
+    return render(request, 'diary/index.html')
 
 def transcription_view(request):
     if request.method == "POST":

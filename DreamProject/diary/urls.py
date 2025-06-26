@@ -2,11 +2,9 @@ from django.urls import path
 
 from . import views
 app_name = "diary"
-urlpatterns = [
-    path("", views.index, name="index"),
-    ]
 
 urlpatterns = [
+    path("", views.index, name="index"),
     path('transcription/', views.transcription_view, name="transcription"),
     path('emotions/', views.analyse_emotions_view, name="emotions"),
     path('prompt/', views.generate_prompt_view, name="prompt"),

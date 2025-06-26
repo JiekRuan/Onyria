@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Onyria - Accueil</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        body {
+            padding: 2rem;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            margin-top: 2rem;
+        }
+        .button {
+            display: block;
+            text-align: center;
+            padding: 1rem;
+            font-size: 1.1rem;
+            border: 2px solid #444;
+            border-radius: 10px;
+            text-decoration: none;
+            background-color: #e0f7fa;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #b2ebf2;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Bienvenue sur <strong>Onyria</strong></h1>
+    <p style="text-align:center;">Explorez vos rêves à travers l’IA ✨</p>
+
+    <div class="grid">
+        <a href="{% url 'transcription' %}" class="button">Transcrire un rêve audio</a>
+        <a href="{% url 'emotions' %}" class="button">Analyser les émotions</a>
+        <a href="{% url 'prompt' %}" class="button">Générer un prompt d’image</a>
+        <a href="{% url 'image' %}" class="button">Générer une image de rêve</a>
+        <a href="{% url 'interpretation' %}" class="button">Interprétation du rêve</a>
+    </div>
+
+</body>
+</html>
