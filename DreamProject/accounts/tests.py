@@ -78,8 +78,8 @@ class ViewsTest(TestCase):
             "email": "user@example.com",
             "password": "userpass123"
         })
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "user@example.com")
+        self.assertRedirects(response, "/diary/record/")
+
 
     def test_logout_view(self):
         self.client.login(email="user@example.com", password="userpass123")
