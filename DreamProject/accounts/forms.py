@@ -17,6 +17,15 @@ class LoginForm(forms.Form):
     email = forms.EmailField(label="Adresse mail")
     password = forms.CharField(label="Mot de passe", widget=forms.PasswordInput)
 
+class UserUpdateForm(forms.ModelForm):
+    class Meta:
+        model = CustomUser
+        fields = ['profile_picture']
+        labels = {
+            'profile_picture': '', 
+        }
+
+
 class CustomPasswordChangeForm(PasswordChangeForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

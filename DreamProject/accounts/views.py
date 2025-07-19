@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.urls import reverse_lazy
-from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm
+from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm, UserUpdateForm
 
 
 def register_view(request):
@@ -43,7 +43,16 @@ def login_view(request):
 
 @login_required
 def gestion_compte_view(request):
-    return render(request, 'accounts/gestion_compte.html', {'user': request.user})
+    if request.method == 'POST':
+        form = UserUpdateForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('gestion_compte')
+    else:
+        form = UserUpdateForm(instance=request.user)
+
+    return render(request, 'accounts/gestion_compte.html', {'form': form, 'user': request.user})
+
 
 @login_required
 def logout_view(request):
