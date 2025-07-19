@@ -109,51 +109,6 @@ def transcribe(request):
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio'})
 
 
-def analyser_texte_view(request):
-    """Analyse à partir du champ texte"""
-    result = None
-    dominant_emotion = None
-    dream_type = None
-    interpretation = None
-    image_path = None
-    user_text = ""
-
-    if request.method == "POST":
-        user_text = request.POST.get("texte", "")
-
-        emotions_resp = mistral_client.chat.complete(
-            model="mistral-large-latest",
-            messages=[
-                {"role": "system", "content": read_file("context_emotion.txt")},
-                {"role": "user", "content": user_text},
-            ],
-            response_format={"type": "json_object"},
-        )
-        result = softmax(json.loads(emotions_resp.choices[0].message.content))
-        dominant_emotion = max(result.items(), key=lambda x: x[1])
-        dream_type = classify_dream_from_emotions(result)
-        interpretation = interpret_dream_with_ai(user_text)
-
-        prompt_resp = mistral_client.chat.complete(
-            model="mistral-large-latest",
-            messages=[
-                {"role": "system", "content": read_file("resume_text.txt")},
-                {"role": "user", "content": user_text},
-            ],
-        )
-        prompt = prompt_resp.choices[0].message.content
-        image_path = prompt_to_image(prompt)
-
-    return render(request, "diary/models.html", {
-        "result": result,
-        "dominant_emotion": dominant_emotion,
-        "dream_type": dream_type,
-        "interpretation": interpretation,
-        "image_path": image_path,
-        "texte": user_text,
-    })
-
-
 @csrf_exempt
 def analyse_from_voice(request):
     """Analyse complète à partir de l’audio (transcription + interprétation)"""
