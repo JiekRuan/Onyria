@@ -205,4 +205,9 @@ def analyse_from_voice(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
 
+
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio transmis'})
+
+def placeholder(request):
+    """Vue vide pour /diary en attendant"""
+    return render(request, 'diary/placeholder.html')
