@@ -41,9 +41,11 @@ def login_view(request):
         form = LoginForm()
     return render(request, 'accounts/login.html', {'form': form})
 
-def profil_view(request):
-    return render(request, 'accounts/profil.html', {'user': request.user})
+@login_required
+def gestion_compte_view(request):
+    return render(request, 'accounts/gestion_compte.html', {'user': request.user})
 
+@login_required
 def logout_view(request):
     logout(request)
     return redirect('login')  # Redirige vers la page de login après la déconnexion
