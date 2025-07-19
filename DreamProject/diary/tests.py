@@ -5,9 +5,7 @@ from unittest.mock import patch, MagicMock
 import json
 import tempfile
 from .models import Dream
-from .utils import transcribe_audio, create_transcription
-from unittest.mock import patch, MagicMock
-from .views import softmax, classify_dream_from_emotions
+from .utils import transcribe_audio, softmax, classify_dream
 
 User = get_user_model()
 
@@ -157,4 +155,3 @@ class DreamModelTest(TestCase):
         }
         dominant_emotion = max(balanced_emotions.items(), key=lambda x: x[1])
         self.assertEqual(dominant_emotion[0], "joie")
-        
