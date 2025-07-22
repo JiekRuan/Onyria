@@ -3,6 +3,7 @@ import json
 import math
 import tempfile
 from datetime import datetime
+from django.core.files.base import ContentFile
 from dotenv import load_dotenv
 from django.conf import settings
 from groq import Groq
@@ -100,18 +101,22 @@ def interpret_dream(text):
 
 # ---------- IMAGE ----------
 
-def generate_image_from_text(text):
-    """Génère une image à partir d’un résumé de rêve"""
+def generate_image_from_text(user, prompt, dream_instance):
+    """
+    Génère une image IA à partir d’un prompt, puis l’attache au modèle Dream via ImageField.
+    """
     try:
+        # 1. Obtenir le prompt final via Mistral
         prompt_resp = mistral_client.chat.complete(
             model="mistral-large-latest",
             messages=[
                 {"role": "system", "content": read_file("resume_text.txt")},
-                {"role": "user", "content": text},
+                {"role": "user", "content": prompt},
             ],
         )
-        prompt = prompt_resp.choices[0].message.content
+        final_prompt = prompt_resp.choices[0].message.content
 
+        # 2. Création de l’agent d’image
         agent = mistral_client.beta.agents.create(
             model="mistral-medium-2505",
             name="Dream Image Agent",
@@ -120,10 +125,10 @@ def generate_image_from_text(text):
             completion_args={"temperature": 0.3, "top_p": 0.95},
         )
 
-        conversation = mistral_client.beta.conversations.start(
-            agent_id=agent.id, inputs=prompt
-        )
+        # 3. Démarrer la génération
+        conversation = mistral_client.beta.conversations.start(agent_id=agent.id, inputs=final_prompt)
 
+        # 4. Récupérer le file_id
         file_id = next(
             (item.file_id for output in conversation.outputs if hasattr(output, "content")
              for item in output.content if hasattr(item, "file_id")),
@@ -133,16 +138,17 @@ def generate_image_from_text(text):
         if not file_id:
             return None
 
+        # 5. Télécharger l’image
         image_bytes = mistral_client.files.download(file_id=file_id).read()
-        output_dir = os.path.join(BASE_DIR, "diary", "static", "diary", "generated_images")
-        os.makedirs(output_dir, exist_ok=True)
-        filename = f"dream_image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-        path = os.path.join(output_dir, filename)
+        filename = f"dream_{dream_instance.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
 
-        with open(path, "wb") as f:
-            f.write(image_bytes)
+        # 6. Enregistrer dans le champ ImageField du modèle
+        dream_instance.image.save(filename, ContentFile(image_bytes))
+        dream_instance.image_prompt = final_prompt
+        dream_instance.save()
 
-        return f"diary/generated_images/{filename}"
+        return True
 
-    except Exception:
-        return None
+    except Exception as e:
+        print(f"Erreur génération image : {e}")
+        return False

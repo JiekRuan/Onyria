@@ -2,6 +2,8 @@ import json
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from .models import Dream
 from .utils import (
     transcribe_audio,
     analyze_emotions,
@@ -33,21 +35,43 @@ def transcribe(request):
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio'})
 
 @csrf_exempt
+@login_required
 def analyse_from_voice(request):
-    """Analyse complète du rêve à partir de l’audio : transcription, émotion, type, interprétation, image"""
     if request.method == 'POST' and 'audio' in request.FILES:
         try:
+            print("🎙️ Réception audio OK")
             audio_file = request.FILES['audio']
             audio_data = audio_file.read()
+
             transcription = transcribe_audio(audio_data)
+            print("📄 Transcription :", transcription)
 
             if not transcription:
                 return JsonResponse({'success': False, 'error': 'Échec de la transcription'})
 
             emotions, dominant_emotion = analyze_emotions(transcription)
+            print("💬 Émotions :", emotions)
+            print("🎯 Dominante :", dominant_emotion)
+
             dream_type = classify_dream(emotions)
+            print("🌙 Type de rêve :", dream_type)
+
             interpretation = interpret_dream(transcription)
-            image_path = generate_image_from_text(transcription)
+            print("🧠 Interprétation :", interpretation)
+
+            # Création du rêve
+            dream = Dream.objects.create(
+                user=request.user,
+                transcription=transcription,
+                emotions=emotions,
+                dominant_emotion=dominant_emotion[0],
+                dream_type=dream_type,
+                interpretation=interpretation,
+                is_analyzed=True,
+            )
+
+            generate_image_from_text(request.user, transcription, dream)
+            print("🎨 Image attachée :", dream.image.url if dream.image else "aucune")
 
             return JsonResponse({
                 "success": True,
@@ -56,13 +80,16 @@ def analyse_from_voice(request):
                 "dominant_emotion": dominant_emotion,
                 "dream_type": dream_type,
                 "interpretation": interpretation,
-                "image_path": image_path,
+                "image_path": dream.image.url if dream.image else None,
             })
 
         except Exception as e:
+            print("❌ ERREUR :", e)
             return JsonResponse({'success': False, 'error': str(e)})
 
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio transmis'})
+
+
 
 def placeholder(request):
     """Vue temporaire pour /diary"""

@@ -172,9 +172,10 @@
           sectionInterpretation.style.display = "block";
 
           if (result.image_path) {
-            imageRevee.innerHTML = `<img src="/static/${result.image_path}" alt="Image du rêve" class="max-w-full rounded shadow" />`;
+            imageRevee.innerHTML = `<img src="${result.image_path}" alt="Image du rêve" class="max-w-full rounded shadow" />`;
             sectionImage.style.display = "block";
           }
+
 
           showStatus("Analyse terminée !");
         } else {
