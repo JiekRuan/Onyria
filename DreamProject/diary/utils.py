@@ -57,18 +57,18 @@ def transcribe_audio(audio_data, language="fr"):
         os.unlink(temp_file_path)
         return transcription.text
 
-    except Exception as e:
-        print(f"Erreur: {e}")
+    except Exception:
         return None
 
 # ---------- ANALYSE D'ÉMOTIONS ----------
 
 def analyze_emotions(text):
     """Renvoie le score des émotions + l’émotion dominante"""
+    system_prompt = read_file("context_emotion.txt")
     response = mistral_client.chat.complete(
         model="mistral-large-latest",
         messages=[
-            {"role": "system", "content": read_file("context_emotion.txt")},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": text},
         ],
         response_format={"type": "json_object"},
@@ -89,10 +89,11 @@ def classify_dream(emotions):
 
 def interpret_dream(text):
     """Demande à Mistral une interprétation du rêve"""
+    system_prompt = read_file("context_interpretation.txt")
     resp = mistral_client.chat.complete(
         model="mistral-large-latest",
         messages=[
-            {"role": "system", "content": read_file("context_interpretation.txt")},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": text},
         ],
         response_format={"type": "json_object"},
@@ -101,34 +102,27 @@ def interpret_dream(text):
 
 # ---------- IMAGE ----------
 
-def generate_image_from_text(user, prompt, dream_instance):
+def generate_image_from_text(user, prompt_text, dream_instance):
     """
-    Génère une image IA à partir d’un prompt, puis l’attache au modèle Dream via ImageField.
+    Génère une image IA à partir du texte du rêve, via agent Mistral.
+    Attache l’image et le prompt d’entrée au modèle Dream.
     """
     try:
-        # 1. Obtenir le prompt final via Mistral
-        prompt_resp = mistral_client.chat.complete(
-            model="mistral-large-latest",
-            messages=[
-                {"role": "system", "content": read_file("resume_text.txt")},
-                {"role": "user", "content": prompt},
-            ],
-        )
-        final_prompt = prompt_resp.choices[0].message.content
+        system_instructions = read_file("instructions_image.txt")
 
-        # 2. Création de l’agent d’image
         agent = mistral_client.beta.agents.create(
             model="mistral-medium-2505",
             name="Dream Image Agent",
-            instructions=read_file("instructions_image.txt"),
+            instructions=system_instructions,
             tools=[{"type": "image_generation"}],
             completion_args={"temperature": 0.3, "top_p": 0.95},
         )
 
-        # 3. Démarrer la génération
-        conversation = mistral_client.beta.conversations.start(agent_id=agent.id, inputs=final_prompt)
+        conversation = mistral_client.beta.conversations.start(
+            agent_id=agent.id,
+            inputs=prompt_text
+        )
 
-        # 4. Récupérer le file_id
         file_id = next(
             (item.file_id for output in conversation.outputs if hasattr(output, "content")
              for item in output.content if hasattr(item, "file_id")),
@@ -136,19 +130,16 @@ def generate_image_from_text(user, prompt, dream_instance):
         )
 
         if not file_id:
-            return None
+            return False
 
-        # 5. Télécharger l’image
         image_bytes = mistral_client.files.download(file_id=file_id).read()
         filename = f"dream_{dream_instance.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
 
-        # 6. Enregistrer dans le champ ImageField du modèle
         dream_instance.image.save(filename, ContentFile(image_bytes))
-        dream_instance.image_prompt = final_prompt
+        dream_instance.image_prompt = prompt_text
         dream_instance.save()
 
         return True
 
-    except Exception as e:
-        print(f"Erreur génération image : {e}")
+    except Exception:
         return False
