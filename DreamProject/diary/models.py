@@ -1,7 +1,10 @@
 from django.db import models
-from django.contrib.auth.models import User
 from django.conf import settings
 import json
+
+
+def dream_image_path(instance, filename):
+    return f'dream_images/user_{instance.user.id}/{filename}'
 
 
 class Dream(models.Model):
@@ -35,11 +38,12 @@ class Dream(models.Model):
     )
 
     # Contenu généré
-    image_base64 = models.TextField(
-        blank=True,
+    image = models.ImageField(
+        upload_to=dream_image_path,
         null=True,
-        verbose_name="Image en Base64",
-        help_text="Image du rêve encodée en base64",
+        blank=True,
+        verbose_name="Image du rêve",
+        help_text="Image générée à partir du rêve"
     )
     image_prompt = models.TextField(
         blank=True,
@@ -110,7 +114,7 @@ class Dream(models.Model):
     @property
     def has_image(self):
         """Vérifie si le rêve a une image"""
-        return bool(self.image_base64)
+        return bool(self.image)
 
     @property
     def short_transcription(self):
