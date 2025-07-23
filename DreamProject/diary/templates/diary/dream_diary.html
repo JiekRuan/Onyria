@@ -4,52 +4,50 @@
 {% block title %}Journal de rêves{% endblock %}
 
 {% block content %}
-<div class="px-6 sm:px-8 lg:px-12">
-  <div class="max-w-4xl mx-auto bg-white rounded-xl shadow py-8 px-6 md:px-8 mt-6 mb-10">
+<div class="max-w-4xl mx-auto bg-white rounded-xl shadow">
 
-    <!-- Bloc profil -->
-    <div class="flex gap-6 mb-6">
+  <!-- Bloc profil -->
+  <div class="flex gap-6 mb-6 p-6">
 
-      <!-- Image de profil (agrandie) -->
-      <div class="flex-shrink-0">
-        {% if user.profile_picture %}
-          <img src="{{ user.profile_picture.url }}" alt="Profil"
-               class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
-        {% else %}
-          <img src="{% static 'profil-placeholder.png' %}" alt="Profil"
-               class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
-        {% endif %}
-      </div>
-
-      <!-- Nom d'utilisateur aligné en haut à droite -->
-      <div class="flex flex-col justify-start">
-        <h2 class="text-2xl font-semibold text-gray-800">{{ user.username }}</h2>
-      </div>
-
+    <!-- Image de profil (agrandie) -->
+    <div class="flex-shrink-0">
+      {% if user.profile_picture %}
+        <img src="{{ user.profile_picture.url }}" alt="Profil"
+             class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
+      {% else %}
+        <img src="{% static 'profil-placeholder.png' %}" alt="Profil"
+             class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
+      {% endif %}
     </div>
 
-    <!-- Ligne de séparation profil / images -->
-    <hr class="border-t border-[#ede9f9] mb-6">
-
-    <!-- Grille des rêves -->
-    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1">
-      {% for dream in dreams %}
-        <div class="w-full aspect-square overflow-hidden rounded-lg">
-          {% if dream.image %}
-            <img src="{{ dream.image.url }}" alt="Rêve"
-                 class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 rounded-lg">
-          {% else %}
-            <img src="{% static 'placeholder.png' %}" alt="Pas d’image"
-                 class="w-full h-full object-cover opacity-50 rounded-lg">
-          {% endif %}
-        </div>
-      {% empty %}
-        <p class="col-span-full text-center text-gray-500 text-sm mt-6">
-          Aucun rêve enregistré pour l’instant.
-        </p>
-      {% endfor %}
+    <!-- Nom d'utilisateur aligné en haut à droite -->
+    <div class="flex flex-col justify-start">
+      <h2 class="text-2xl font-semibold text-gray-800">{{ user.username }}</h2>
     </div>
 
   </div>
+
+  <!-- Ligne de séparation profil / images -->
+  <hr class="border-t border-[#ede9f9]">
+
+  <!-- Grille des rêves -->
+  <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1 p-6">
+    {% for dream in dreams %}
+      <div class="w-full aspect-square overflow-hidden rounded-lg">
+        {% if dream.image %}
+          <img src="{{ dream.image.url }}" alt="Rêve"
+               class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 rounded-lg">
+        {% else %}
+          <img src="{% static 'placeholder.png' %}" alt="Pas d’image"
+               class="w-full h-full object-cover opacity-50 rounded-lg">
+        {% endif %}
+      </div>
+    {% empty %}
+      <p class="col-span-full text-center text-gray-500 text-sm mt-6">
+        Aucun rêve enregistré pour l’instant.
+      </p>
+    {% endfor %}
+  </div>
+
 </div>
 {% endblock %}
