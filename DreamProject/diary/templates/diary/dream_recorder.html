@@ -116,7 +116,6 @@
         timer.style.display = "block";
         startTime = Date.now();
         timerInterval = setInterval(updateTimer, 1000);
-        showStatus("Enregistrement en cours...");
       } catch (err) {
         showStatus("Erreur: Impossible d'accéder au microphone");
       }
@@ -131,7 +130,6 @@
 
         recordBtn.textContent = "⏳ Traitement...";
         timer.style.display = "none";
-        showStatus("Traitement en cours...");
       }
     }
 
@@ -176,8 +174,6 @@
             sectionImage.style.display = "block";
           }
 
-
-          showStatus("Analyse terminée !");
         } else {
           showStatus("Erreur : " + result.error);
         }
