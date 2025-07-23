@@ -14,6 +14,12 @@ from .utils import (
 
 # ----- Vues principales ----- #
 
+@login_required
+def dream_diary_view(request):
+    """Affiche tous les rêves de l’utilisateur sous forme de galerie"""
+    dreams = Dream.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'diary/dream_diary.html', {'dreams': dreams})
+
 def dream_recorder_view(request):
     """Page d’enregistrement vocal du rêve"""
     return render(request, 'diary/dream_recorder.html')
@@ -77,7 +83,3 @@ def analyse_from_voice(request):
             return JsonResponse({'success': False, 'error': str(e)})
 
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio transmis'})
-
-def placeholder(request):
-    """Vue temporaire pour /diary"""
-    return render(request, 'diary/placeholder.html')
