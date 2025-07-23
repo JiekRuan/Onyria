@@ -39,25 +39,16 @@ def transcribe(request):
 def analyse_from_voice(request):
     if request.method == 'POST' and 'audio' in request.FILES:
         try:
-            print("🎙️ Réception audio OK")
             audio_file = request.FILES['audio']
             audio_data = audio_file.read()
 
             transcription = transcribe_audio(audio_data)
-            print("📄 Transcription :", transcription)
-
             if not transcription:
                 return JsonResponse({'success': False, 'error': 'Échec de la transcription'})
 
             emotions, dominant_emotion = analyze_emotions(transcription)
-            print("💬 Émotions :", emotions)
-            print("🎯 Dominante :", dominant_emotion)
-
             dream_type = classify_dream(emotions)
-            print("🌙 Type de rêve :", dream_type)
-
             interpretation = interpret_dream(transcription)
-            print("🧠 Interprétation :", interpretation)
 
             # Création du rêve
             dream = Dream.objects.create(
@@ -71,7 +62,6 @@ def analyse_from_voice(request):
             )
 
             generate_image_from_text(request.user, transcription, dream)
-            print("🎨 Image attachée :", dream.image.url if dream.image else "aucune")
 
             return JsonResponse({
                 "success": True,
@@ -84,12 +74,9 @@ def analyse_from_voice(request):
             })
 
         except Exception as e:
-            print("❌ ERREUR :", e)
             return JsonResponse({'success': False, 'error': str(e)})
 
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio transmis'})
-
-
 
 def placeholder(request):
     """Vue temporaire pour /diary"""
