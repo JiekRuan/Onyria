@@ -9,11 +9,13 @@
 <img src="{% static 'Logo_ONYRIA.png' %}" alt="Logo" class="mx-auto mb-6" style="width: 9rem;">
 
 <!-- Titre -->
-<h2 class="text-3xl font-bold mb-4 text-center text-[#7961dd]">Supprimer le compte</h2>
+<h2 class="text-3xl font-normal mb-4 text-center text-[#7961dd]">Supprimer le compte</h2>
 
 <!-- Message d’alerte -->
+<p class="mb-2 text-center text-gray-700 whitespace-nowrap">
+    Êtes-vous sûr·e de vouloir supprimer votre compte&nbsp;?
+</p>
 <p class="mb-6 text-center text-gray-700">
-    Êtes-vous sûr·e de vouloir supprimer votre compte ?<br>
     Cette action est irréversible.
 </p>
 
@@ -23,12 +25,12 @@
     
     <div class="flex space-x-4 justify-center">
         <button type="submit"
-                class="bg-[#7961dd] hover:bg-[#6751c7] text-white font-semibold py-2 px-6 rounded shadow transition duration-200">
+                class="bg-[#7961dd] hover:bg-[#6751c7] text-white font-normal py-2 px-6 rounded shadow transition duration-200">
             Supprimer le compte
         </button>
 
         <a href="{% url 'gestion_compte' %}"
-           class="bg-[#d8c6f5] hover:bg-[#c1b3f0] text-[#5a4a9b] font-semibold py-2 px-6 rounded shadow transition duration-200 flex items-center justify-center">
+           class="bg-[#d8c6f5] hover:bg-[#c1b3f0] text-[#5a4a9b] font-normal py-2 px-6 rounded shadow transition duration-200 flex items-center justify-center">
             Annuler
         </a>
     </div>

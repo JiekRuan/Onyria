@@ -1,11 +1,55 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <title>{% block title %}Onyria{% endblock %}</title>
+
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Tailwind config : ajout de la font grotesk -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            grotesk: ['"Schibsted Grotesk"', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- Font-face locale -->
+  <style>
+    @font-face {
+      font-family: 'Schibsted Grotesk';
+      src: url("{% static 'Font/schibsted-grotesk-v6-latin-regular.woff2' %}") format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'Schibsted Grotesk';
+      src: url("{% static 'Font/schibsted-grotesk-v6-latin-500.woff2' %}") format('woff2');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'Schibsted Grotesk';
+      src: url("{% static 'Font/schibsted-grotesk-v6-latin-600.woff2' %}") format('woff2');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-purple-100 via-pink-50 to-indigo-100 min-h-screen flex items-center justify-center">
+
+<body class="font-grotesk bg-gradient-to-br from-purple-100 via-pink-50 to-indigo-100 min-h-screen flex items-center justify-center">
   <div class="w-full max-w-md p-8 bg-white bg-opacity-80 backdrop-blur rounded-xl shadow-lg">
     {% block content %}
     {% endblock %}
