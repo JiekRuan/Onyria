@@ -45,12 +45,6 @@ class Dream(models.Model):
         verbose_name="Image du rêve",
         help_text="Image générée à partir du rêve"
     )
-    image_prompt = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name="Prompt de l'image",
-        help_text="Prompt utilisé pour générer l'image",
-    )
     interpretation_json = models.TextField(
         blank=True,
         null=True,
