@@ -6,35 +6,42 @@
 
 {% block content %}
 
-<!-- Logo -->
-<img src="{% static 'img/Logo_ONYRIA.png' %}" alt="Logo Onyria" class="mx-auto mb-4" style="width: 9rem;">
-
 <!-- Titre -->
-<h2 class="text-3xl font-normal mb-6 text-center text-[#7961dd]">Gérer mon compte</h2>
+<h2 class="text-3xl font-normal mb-6 text-center text-black">Gérer mon compte</h2>
 
-<!-- Photo de profil personnalisée -->
+<!-- Conteneur principal -->
 <div class="relative w-32 h-32 mx-auto mb-6">
-    <form method="post" enctype="multipart/form-data" id="profile-picture-form">
-        {% csrf_token %}
-        <label for="id_profile_picture" class="cursor-pointer">
-            {% if user.profile_picture %}
-                <img src="{{ user.profile_picture.url }}" alt="Photo de profil"
-                     class="w-32 h-32 rounded-full object-cover shadow-md">
-            {% else %}
-                <img src="{% static 'img/profil_placeholder.png' %}" alt="Photo de profil par défaut"
-                     class="w-32 h-32 rounded-full object-cover shadow-md">
-            {% endif %}
-            <!-- Icône stylo -->
-            <div class="absolute bottom-0 right-0 bg-[#e6dbfa] hover:bg-[#d1c4f7] p-1.5 rounded-full shadow-md transition duration-200 flex items-center justify-center">
-                <svg class="w-5 h-5 text-[#4e3f86]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M17.414 2.586a2 2 0 00-2.828 0L6 10.586 5 15l4.414-1L17.414 5.414a2 2 0 000-2.828z"/>
-                </svg>
-            </div>
-        </label>
-        <!-- Champ file caché -->
-        <input type="file" name="profile_picture" id="id_profile_picture" class="hidden"
-               onchange="document.getElementById('profile-picture-form').submit();">
-    </form>
+
+  <!-- Photo de profil-->
+  <div class="rounded-full overflow-hidden w-full h-full">
+    {% if user.profile_picture %}
+      <img src="{{ user.profile_picture.url }}" alt="Photo de profil"
+           class="w-full h-full object-cover rounded-full" />
+    {% else %}
+      <img src="{% static 'img/profil_placeholder.png' %}" alt="Photo par défaut"
+           class="w-full h-full object-cover rounded-full" />
+    {% endif %}
+
+    <div class="absolute inset-0 rounded-full 
+                shadow-[inset_5px_5px_10px_rgba(0,0,0,0.15),inset_-2px_-2px_5px_rgba(255,255,255,0.35)]
+                pointer-events-none">
+    </div>
+  </div>
+
+  <!-- Bouton pencil -->
+  <form method="post" enctype="multipart/form-data" id="profile-picture-form">
+    {% csrf_token %}
+    <label for="id_profile_picture" class="absolute bottom-0 right-0 cursor-pointer">
+      <div class="btn-ballon-icon">
+        <img src="{% static 'img/pencil.png' %}" alt="Modifier"
+            class="w-4 h-4"
+            style="filter: brightness(0) saturate(100%) invert(16%) sepia(20%) saturate(2151%) hue-rotate(213deg) brightness(95%) contrast(90%);">
+      </div>
+    </label>
+    <!-- Champ file caché -->
+    <input type="file" name="profile_picture" id="id_profile_picture" class="hidden"
+           onchange="document.getElementById('profile-picture-form').submit();">
+  </form>
 </div>
 
 <!-- Infos utilisateur -->
@@ -46,20 +53,17 @@
 <!-- Actions -->
 <div class="max-w-md mx-auto space-y-4">
 
-  <a href="{% url 'password_change' %}"
-     class="block w-full text-center bg-[#e6dbfa] hover:bg-[#d1c4f7] text-[#4e3f86] font-normal py-2 px-4 rounded shadow transition duration-200">
+  <a href="{% url 'password_change' %}" class="btn-ballon">
     Changer mon mot de passe
   </a>
 
-  <a href="{% url 'delete_account' %}"
-     class="block w-full text-center bg-[#e6dbfa] hover:bg-[#d1c4f7] text-[#4e3f86] font-normal py-2 px-4 rounded shadow transition duration-200">
+  <a href="{% url 'delete_account' %}" class="btn-ballon">
     Supprimer mon compte
   </a>
 
   <form action="{% url 'logout' %}" method="post">
     {% csrf_token %}
-    <button type="submit"
-            class="w-full bg-[#e6dbfa] hover:bg-[#d1c4f7] text-[#4e3f86] font-normal py-2 px-4 rounded shadow transition duration-200">
+    <button type="submit" class="btn-ballon">
       Se déconnecter
     </button>
   </form>

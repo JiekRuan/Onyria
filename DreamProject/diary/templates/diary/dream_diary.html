@@ -4,7 +4,6 @@
 {% block title %}Journal de rêves{% endblock %}
 
 {% block content %}
-<div class="bg-white bg-opacity-90 backdrop-blur rounded-xl shadow-lg">
 
   <!-- Bloc profil -->
   <div class="flex gap-6 mb-6 p-6">
@@ -15,7 +14,7 @@
         <img src="{{ user.profile_picture.url }}" alt="Profil"
              class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
       {% else %}
-        <img src="{% static 'img/profil-placeholder.png' %}" alt="Profil"
+        <img src="{% static 'img/profil_placeholder.png' %}" alt="Profil"
              class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
       {% endif %}
     </div>
@@ -31,7 +30,7 @@
   <hr class="border-t border-[#ede9f9]">
 
   <!-- Grille des rêves -->
-  <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1 p-6">
+  <div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-1 p-6">
     {% for dream in dreams %}
       <div class="w-full aspect-square overflow-hidden rounded-lg">
         {% if dream.image %}
@@ -49,5 +48,4 @@
     {% endfor %}
   </div>
 
-</div>
 {% endblock %}

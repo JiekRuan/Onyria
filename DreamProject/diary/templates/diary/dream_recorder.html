@@ -4,20 +4,20 @@
 {% block title %}Analyse vocale du rêve{% endblock %}
 
 {% block content %}
-<div class="w-full max-w-2xl mx-auto bg-white bg-opacity-90 backdrop-blur rounded-xl shadow-lg">
 
   <!-- Contenu interne avec un léger padding -->
   <div class="p-6">
 
     <!-- Titre -->
-    <h1 class="text-3xl text-center text-[#7961dd] mb-6">Raconte ton rêve à voix haute</h1>
+    <h1 class="text-3xl text-center text-black mb-6">Raconte ton rêve à voix haute</h1>
 
     <!-- Bouton d'enregistrement -->
-    <div class="text-center mb-6">
-      <button id="recordBtn" class="bg-[#7961dd] hover:bg-[#6751c7] text-white py-2 px-6 rounded shadow transition transform duration-200 active:scale-95">
-        Enregistrer
-      </button>
-    </div>
+    <div class="text-center">
+  <button id="recordBtn" class="btn-ballon-sm">
+    Enregistrer
+  </button>
+</div>
+
 
     <!-- Timer -->
     <div id="timer" class="text-center text-gray-600 mb-4 hidden">
@@ -29,38 +29,37 @@
 
     <!-- Transcription -->
     <div id="sectionTranscription" class="hidden mb-6">
-      <h2 class="text-xl text-[#7961dd] mb-2">Transcription</h2>
+      <h2 class="text-xl text-black mb-2">Transcription</h2>
       <div id="transcriptionText" class="bg-white/70 p-4 rounded border border-[#cfc3f9] text-gray-800"></div>
     </div>
 
     <!-- Émotion -->
     <div id="sectionEmotion" class="hidden mb-6">
-      <h3 class="text-xl text-[#7961dd] mb-2">Émotion dominante</h3>
+      <h3 class="text-xl text-black mb-2">Émotion dominante</h3>
       <div id="emotionDominante" class="bg-white/70 p-4 rounded border border-[#cfc3f9] text-gray-800"></div>
     </div>
 
     <!-- Type de rêve -->
     <div id="sectionDreamType" class="hidden mb-6">
-      <h3 class="text-xl text-[#7961dd] mb-2">Type de rêve</h3>
+      <h3 class="text-xl text-black mb-2">Type de rêve</h3>
       <div id="dreamType" class="bg-white/70 p-4 rounded border border-[#cfc3f9] text-gray-800"></div>
     </div>
 
     <!-- Interprétation -->
     <div id="sectionInterpretation" class="hidden mb-6">
-      <h3 class="text-xl text-[#7961dd] mb-2">Interprétation</h3>
+      <h3 class="text-xl text-black mb-2">Interprétation</h3>
       <div id="interpretation" class="bg-white/70 p-4 rounded border border-[#cfc3f9] text-gray-800"></div>
     </div>
 
     <!-- Image générée -->
     <div id="sectionImage" class="hidden mb-2">
-      <h3 class="text-xl text-[#7961dd] mb-2">Image générée</h3>
+      <h3 class="text-xl text-black mb-2">Image générée</h3>
       <div id="imageRevee" class="flex justify-center">
         <!-- Image s’affichera ici -->
       </div>
     </div>
 
   </div>
-</div>
 
 <script>
   let mediaRecorder;

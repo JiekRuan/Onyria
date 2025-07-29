@@ -6,11 +6,8 @@
 
 {% block content %}
 
-<!-- Logo Onyria -->
-<img src="{% static 'img/Logo_ONYRIA.png' %}" alt="Logo" class="mx-auto mb-4" style="width: 9rem;">
-
 <!-- Titre -->
-<h2 class="text-3xl font-normal mb-6 text-center text-[#7961dd]">Connexion</h2>
+<h2 class="text-3xl font-normal mb-6 text-center text-black">Connexion</h2>
 
 <!-- Formulaire -->
 <form method="post" class="space-y-5">
@@ -22,7 +19,7 @@
             <label for="{{ field.id_for_label }}" class="block text-gray-700 font-normal mb-1">
                 {{ field.label }}
             </label>
-            {{ field|add_class:"w-full px-4 py-2 bg-white/70 border border-[#cfc3f9] rounded placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#7961dd]" }}
+            {{ field|add_class:"w-full px-4 py-2 bg-white border border-[#d9d1fa] rounded-lg shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] focus:outline-none focus:ring-2 focus:ring-[#cfc3f9] transition-all duration-150" }}
             {% if field.errors %}
                 <p class="text-red-500 text-sm mt-1">{{ field.errors|striptags }}</p>
             {% endif %}
@@ -31,7 +28,7 @@
 
     <!-- Bouton -->
     <button type="submit"
-            class="w-full bg-[#7961dd] hover:bg-[#6751c7] text-white font-normal py-2 px-4 rounded shadow transition duration-200">
+        class="btn-ballon">
         Se connecter
     </button>
 </form>

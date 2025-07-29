@@ -1,3 +1,38 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .btn-ballon {
+    @apply block w-full text-center relative
+      bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
+      hover:from-[#f0eafe] hover:to-[#cdbef4]
+      text-[#4e3f86] font-semibold py-2.5 px-5 
+      rounded-full border border-[0.5px] border-[#d3c6f5]
+      shadow-[inset_0_3px_3px_rgba(255,255,255,0.7),inset_0_-4px_7px_rgba(0,0,0,0.12),0_6px_14px_rgba(0,0,0,0.12)]
+      ring-1 ring-white/30 transition-all duration-200;
+  }
+}
+
+@layer components {
+  .btn-ballon-sm {
+    @apply inline-block text-center relative
+      bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
+      hover:from-[#f0eafe] hover:to-[#cdbef4]
+      text-[#4e3f86] font-semibold py-2.5 px-6 
+      rounded-full border border-[0.5px] border-[#ddd3f7]
+      shadow-[inset_0_5px_8px_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.05),0_5px_10px_rgba(0,0,0,0.05)]
+      ring-1 ring-white/30 transition-all duration-200;
+  }
+}
+
+@layer components {
+  .btn-ballon-icon {
+    @apply relative p-1.5 w-8 h-8 rounded-full flex items-center justify-center
+      bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
+      hover:from-[#f0eafe] hover:to-[#cdbef4]
+      border border-[0.5px] border-[#d3c6f5]
+      shadow-[inset_0_3px_4px_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.08),0_4px_8px_rgba(0,0,0,0.1)]
+      ring-1 ring-white/30 transition-all duration-200;
+  }
+}
