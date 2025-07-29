@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -5,32 +6,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Onyria{% endblock %}</title>
 
-  <!-- Google Fonts – Schibsted Grotesk -->
-  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS compilé localement -->
+  <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Déclaration Tailwind -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            grotesk: ['"Schibsted Grotesk"', 'sans-serif'],
-          },
-        },
-      },
+  <!-- Font-face locale pour Schibsted Grotesk -->
+  <style>
+    @font-face {
+      font-family: 'Schibsted Grotesk';
+      src: url("{% static 'Font/schibsted-grotesk-v6-latin-regular.woff2' %}") format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
     }
-  </script>
+
+    @font-face {
+      font-family: 'Schibsted Grotesk';
+      src: url("{% static 'Font/schibsted-grotesk-v6-latin-500.woff2' %}") format('woff2');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'Schibsted Grotesk';
+      src: url("{% static 'Font/schibsted-grotesk-v6-latin-600.woff2' %}") format('woff2');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
 </head>
 
 <body class="bg-gradient-to-br from-purple-100 via-pink-50 to-indigo-100 min-h-screen px-4 py-8 flex items-center justify-center font-grotesk">
-
   <div class="w-full max-w-5xl">
     {% block content %}
     {% endblock %}
   </div>
-
 </body>
 </html>

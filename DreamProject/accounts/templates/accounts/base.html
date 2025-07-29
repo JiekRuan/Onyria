@@ -5,23 +5,10 @@
   <meta charset="UTF-8">
   <title>{% block title %}Onyria{% endblock %}</title>
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS compilé localement -->
+  <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
 
-  <!-- Tailwind config : ajout de la font grotesk -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            grotesk: ['"Schibsted Grotesk"', 'sans-serif'],
-          },
-        },
-      },
-    }
-  </script>
-
-  <!-- Font-face locale -->
+  <!-- Font-face locale pour Schibsted Grotesk -->
   <style>
     @font-face {
       font-family: 'Schibsted Grotesk';
