@@ -21,9 +21,8 @@
                 <img src="{{ user.profile_picture.url }}" alt="Photo de profil"
                      class="w-32 h-32 rounded-full object-cover shadow-md">
             {% else %}
-                <div class="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 shadow-md">
-                    <span class="text-sm">Aucune image</span>
-                </div>
+                <img src="{% static 'img/profil_placeholder.png' %}" alt="Photo de profil par défaut"
+                     class="w-32 h-32 rounded-full object-cover shadow-md">
             {% endif %}
             <!-- Icône stylo -->
             <div class="absolute bottom-0 right-0 bg-[#e6dbfa] hover:bg-[#d1c4f7] p-1.5 rounded-full shadow-md transition duration-200 flex items-center justify-center">
