@@ -54,22 +54,20 @@
   <hr class="border-t border-[#ede9f9]">
 
   <!-- Grille des rêves -->
-  <div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-1 p-6">
+    <div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-1 p-6">
     {% for dream in dreams %}
-      <div class="w-full aspect-square overflow-hidden rounded-lg">
-        {% if dream.image %}
-          <img src="{{ dream.image.url }}" alt="Rêve"
-               class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 rounded-lg">
-        {% else %}
-          <img src="{% static 'img/placeholder.png' %}" alt="Pas d’image"
-               class="w-full h-full object-cover opacity-50 rounded-lg">
-        {% endif %}
-      </div>
+        <div class="w-full aspect-square overflow-hidden rounded-md group transition-transform duration-300 hover:scale-105">
+        <img
+            src="{% if dream.image %}{{ dream.image.url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}"
+            alt="{% if dream.image %}Rêve{% else %}Pas d’image{% endif %}"
+            class="w-full h-full object-cover {% if not dream.image %}opacity-50{% endif %}"
+        >
+        </div>
     {% empty %}
-      <p class="col-span-full text-center text-gray-500 text-sm mt-6">
+        <p class="col-span-full text-center text-gray-500 text-sm mt-6">
         Aucun rêve enregistré pour l’instant.
-      </p>
+        </p>
     {% endfor %}
-  </div>
+    </div>
 
 {% endblock %}
