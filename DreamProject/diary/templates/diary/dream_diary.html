@@ -4,27 +4,51 @@
 {% block title %}Journal de rêves{% endblock %}
 
 {% block content %}
+<!-- Bloc profil centré : photo + pseudo + mantra -->
+<div class="flex flex-col items-center justify-center text-center gap-2 mb-10 p-6">
 
-  <!-- Bloc profil -->
-  <div class="flex gap-6 mb-6 p-6">
-
-    <!-- Image de profil (agrandie) -->
-    <div class="flex-shrink-0">
+  <!-- Image de profil avec effet "trou" -->
+  <div class="relative w-32 h-32">
+    <div class="rounded-full overflow-hidden w-full h-full">
       {% if user.profile_picture %}
         <img src="{{ user.profile_picture.url }}" alt="Profil"
-             class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
+             class="w-full h-full object-cover rounded-full" />
       {% else %}
         <img src="{% static 'img/profil_placeholder.png' %}" alt="Profil"
-             class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
+             class="w-full h-full object-cover rounded-full" />
       {% endif %}
+      <!-- Effet creux -->
+      <div class="absolute inset-0 rounded-full 
+           shadow-[inset_5px_5px_10px_rgba(0,0,0,0.15),inset_-2px_-2px_5px_rgba(255,255,255,0.35)] 
+           pointer-events-none">
+      </div>
     </div>
-
-    <!-- Nom d'utilisateur aligné en haut à droite -->
-    <div class="flex flex-col justify-start">
-      <h2 class="text-2xl font-medium text-gray-800">{{ user.username }}</h2>
-    </div>
-
   </div>
+
+  <!-- Nom -->
+  <h2 class="text-[1.3rem] font-semibold text-gray-800">{{ user.username }}</h2>
+
+    <div class="relative w-full flex justify-center px-4 mt-2">
+    <div class="relative max-w-[70%] text-center px-6">
+
+        <!-- Guillemets gauche -->
+        <img src="{% static 'img/left_quotation_marks.png' %}" alt="Guillemet gauche"
+            class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.35rem]" />
+
+        <!-- Guillemets droit -->
+        <img src="{% static 'img/right_quotation_marks.png' %}" alt="Guillemet droit"
+            class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.35rem]" />
+
+        <!-- Mantra/bio  -->
+        <p class="text-[0.95rem] text-black font-normal leading-tight">
+        La nuit, je deviens l’héroïne de mondes silencieux.
+        </p>
+
+    </div>
+    </div>
+
+
+</div>
 
   <!-- Ligne de séparation profil / images -->
   <hr class="border-t border-[#ede9f9]">
