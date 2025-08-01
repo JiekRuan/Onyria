@@ -42,16 +42,16 @@ def login_view(request):
     return render(request, 'accounts/login.html', {'form': form})
 
 @login_required
-def gestion_compte_view(request):
+def account_management_view(request):
     if request.method == 'POST':
         form = UserUpdateForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             form.save()
-            return redirect('gestion_compte')
+            return redirect('account_management')
     else:
         form = UserUpdateForm(instance=request.user)
 
-    return render(request, 'accounts/gestion_compte.html', {'form': form, 'user': request.user})
+    return render(request, 'accounts/account_management.html', {'form': form, 'user': request.user})
 
 
 @login_required
