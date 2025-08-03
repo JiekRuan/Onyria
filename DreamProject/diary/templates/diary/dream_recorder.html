@@ -6,60 +6,64 @@
 {% block content %}
 
   <!-- Contenu interne avec un léger padding -->
-  <div class="p-6">
+<div class="p-6">
 
     <!-- Titre -->
-    <h1 class="text-3xl text-center text-black mb-6">Raconte ton rêve à voix haute</h1>
-
-    <!-- Bouton d'enregistrement -->
-    <div class="text-center">
-  <button id="recordBtn" class="btn-ballon-sm">
-    Enregistrer
-  </button>
-</div>
+  <h1 class="text-3xl text-center text-black mb-6">Raconte ton rêve à voix haute</h1>
+  
+ <!-- Bouton d'enregistrement -->
+    <div class="text-center mb-6">
+    <button id="recordBtn" class="btn-ballon-sm">
+      Enregistrer
+    </button>
+  </div>
 
 
     <!-- Timer -->
-    <div id="timer" class="text-center text-gray-600 mb-4 hidden">
-      Temps : <span id="timerText" class="font-mono">00:00</span>
-    </div>
+  <div id="timer" class="text-center text-gray-600 mb-4 hidden">
+    Temps : <span id="timerText" class="font-mono">00:00</span>
+  </div>
 
     <!-- Statut -->
-    <div id="status" class="text-center text-sm text-gray-700 mb-6 hidden"></div>
+  <div id="status" class="text-center text-sm text-gray-700 mb-6 hidden"></div>
 
-    <!-- Transcription -->
-    <div id="sectionTranscription" class="hidden mb-6">
-      <h2 class="text-xl text-black mb-2">Transcription</h2>
-      <div id="transcriptionText" class="bg-white/70 p-4 rounded border border-[#cfc3f9] text-gray-800"></div>
-    </div>
-
-    <!-- Émotion -->
-    <div id="sectionEmotion" class="hidden mb-6">
-      <h3 class="text-xl text-black mb-2">Émotion dominante</h3>
-      <div id="emotionDominante" class="bg-white/70 p-4 rounded border border-[#cfc3f9] text-gray-800"></div>
-    </div>
-
-    <!-- Type de rêve -->
-    <div id="sectionDreamType" class="hidden mb-6">
-      <h3 class="text-xl text-black mb-2">Type de rêve</h3>
-      <div id="dreamType" class="bg-white/70 p-4 rounded border border-[#cfc3f9] text-gray-800"></div>
-    </div>
-
-    <!-- Interprétation -->
-    <div id="sectionInterpretation" class="hidden mb-6">
-      <h3 class="text-xl text-black mb-2">Interprétation</h3>
-      <div id="interpretation" class="bg-white/70 p-4 rounded border border-[#cfc3f9] text-gray-800"></div>
-    </div>
-
-    <!-- Image générée -->
-    <div id="sectionImage" class="hidden mb-2">
-      <h3 class="text-xl text-black mb-2">Image générée</h3>
-      <div id="imageRevee" class="flex justify-center">
-        <!-- Image s’affichera ici -->
+  <!-- Bloc transcription -->
+  <div class="mb-6 mt-6 hidden" id="sectionTranscription">
+    <div class="pastel-baby-powder">
+      <h2 class="text-xl font-semibold text-black mb-3 text-center">Transcription</h2>
+      <div id="transcriptionText" class="text-black text-sm leading-relaxed">
+        Ton texte apparaîtra ici.
       </div>
     </div>
-
   </div>
+
+  <!-- Bloc émotion + type de rêve côte à côte -->
+  <div class="mb-6 hidden flex gap-4" id="sectionEmotionDream">
+    <div class="pastel-purple w-1/2">
+      <h3 class="text-xl font-semibold text-black mb-3 text-center">Émotion dominante</h3>
+      <div id="emotionDominante" class="text-black text-sm leading-relaxed text-center"></div>
+    </div>
+
+    <div class="pastel-vanilla w-1/2">
+      <h3 class="text-xl font-semibold text-black mb-3 text-center">Type de rêve</h3>
+      <div id="dreamType" class="text-black text-sm leading-relaxed text-center"></div>
+    </div>
+  </div>
+
+  <!-- Bloc interprétation -->
+  <div class="mb-6 hidden" id="sectionInterpretation">
+    <div class="pastel-yellow">
+      <h3 class="text-xl font-semibold text-black mb-3 text-center">Interprétation</h3>
+      <div id="interpretation" class="text-black text-sm leading-relaxed"></div>
+    </div>
+  </div>
+
+  <!-- Bloc image générée -->
+  <div id="sectionImage" class="hidden mb-2">
+    <div id="imageRevee" class="flex justify-center"></div>
+  </div>
+
+</div>
 
 <script>
   let mediaRecorder;
@@ -80,8 +84,7 @@
   const imageRevee = document.getElementById("imageRevee");
 
   const sectionTranscription = document.getElementById("sectionTranscription");
-  const sectionEmotion = document.getElementById("sectionEmotion");
-  const sectionDreamType = document.getElementById("sectionDreamType");
+  const sectionEmotionDream = document.getElementById("sectionEmotionDream");
   const sectionInterpretation = document.getElementById("sectionInterpretation");
   const sectionImage = document.getElementById("sectionImage");
 
@@ -156,21 +159,29 @@
         sectionTranscription.style.display = "block";
 
         emotionDominante.textContent = `${capitalize(result.dominant_emotion[0])} (${(result.dominant_emotion[1] * 100).toFixed(1)}%)`;
-        sectionEmotion.style.display = "block";
-
         dreamType.textContent = result.dream_type;
-        sectionDreamType.style.display = "block";
+        sectionEmotionDream.style.display = "flex";
 
         interpretation.innerHTML = "";
         for (const [key, val] of Object.entries(result.interpretation)) {
-          interpretation.innerHTML += `<p><strong>${capitalize(key)}</strong> : ${val}</p>`;
+          const p = document.createElement("p");
+          const strong = document.createElement("strong");
+          strong.textContent = capitalize(key);
+          p.appendChild(strong);
+          p.appendChild(document.createTextNode(` : ${val}`));
+          interpretation.appendChild(p);
         }
         sectionInterpretation.style.display = "block";
 
-        if (result.image_path) {
-          imageRevee.innerHTML = `<img src="${result.image_path}" alt="Image du rêve" class="max-w-full rounded shadow" />`;
-          sectionImage.style.display = "block";
-        }
+        const imagePath = result.image_path || "{% static 'img/placeholder.png' %}";
+        imageRevee.innerHTML = ""; // Clear any previous content
+        const img = document.createElement("img");
+        img.src = imagePath;
+        img.alt = "Image du rêve";
+        img.className = "pastel-image w-full max-w-3xl aspect-[4/3] object-cover mx-auto";
+        imageRevee.appendChild(img);
+
+        sectionImage.style.display = "block";
 
       } else {
         showStatus("Erreur : " + result.error);
@@ -195,4 +206,5 @@
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 </script>
+
 {% endblock %}

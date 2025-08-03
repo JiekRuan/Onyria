@@ -3,43 +3,76 @@
 @tailwind utilities;
 
 @layer components {
-  .btn-ballon {
-    @apply block w-full text-center relative
-      bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
-      hover:from-[#f0eafe] hover:to-[#cdbef4]
-      text-[#4e3f86] font-semibold py-2.5 px-5 
-      rounded-full border border-[0.5px] border-[#d3c6f5]
-      shadow-[inset_0_3px_3px_rgba(255,255,255,0.7),inset_0_-4px_7px_rgba(0,0,0,0.12),0_6px_14px_rgba(0,0,0,0.12)]
-      ring-1 ring-white/30 transition-all duration-200;
-  }
+ .btn-ballon {
+  @apply block w-full text-center relative
+    bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
+    hover:from-[#f0eafe] hover:to-[#cdbef4]
+    text-[#4e3f86] font-semibold py-2.5 px-5 
+    rounded-full border border-[1.5px] border-[#b9a8ec]
+    shadow-[inset_0_3px_3px_rgba(255,255,255,0.7),inset_0_-4px_7px_rgba(0,0,0,0.12),0_6px_14px_rgba(0,0,0,0.12)]
+    ring-1 ring-white/40 transition-all duration-200;
 }
 
-@layer components {
-  .btn-ballon-sm {
-    @apply inline-block text-center relative
-      bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
-      hover:from-[#f0eafe] hover:to-[#cdbef4]
-      text-[#4e3f86] font-semibold py-2.5 px-6 
-      rounded-full border border-[0.5px] border-[#ddd3f7]
-      shadow-[inset_0_5px_8px_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.05),0_5px_10px_rgba(0,0,0,0.05)]
-      ring-1 ring-white/30 transition-all duration-200;
-  }
+.btn-ballon-sm {
+  @apply inline-block text-center relative
+    bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
+    hover:from-[#f0eafe] hover:to-[#cdbef4]
+    text-[#4e3f86] font-semibold py-2.5 px-6 
+    rounded-full border border-[1.5px] border-[#b9a8ec]
+    shadow-[inset_0_5px_8px_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.05),0_5px_10px_rgba(0,0,0,0.07)]
+    ring-1 ring-white/40 transition-all duration-200;
 }
 
-@layer components {
-  .btn-ballon-icon {
-    @apply relative p-1.5 w-8 h-8 rounded-full flex items-center justify-center
-      bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
-      hover:from-[#f0eafe] hover:to-[#cdbef4]
-      border border-[0.5px] border-[#d3c6f5]
-      shadow-[inset_0_3px_4px_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.08),0_4px_8px_rgba(0,0,0,0.1)]
-      ring-1 ring-white/30 transition-all duration-200;
-  }
+.btn-ballon-icon {
+  @apply relative p-1.5 w-8 h-8 rounded-full flex items-center justify-center
+    bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
+    hover:from-[#f0eafe] hover:to-[#cdbef4]
+    border border-[1.5px] border-[#b9a8ec]
+    shadow-[inset_0_3px_4px_rgba(255,255,255,0.75),inset_0_-2px_4px_rgba(0,0,0,0.08),0_4px_8px_rgba(0,0,0,0.1)]
+    ring-1 ring-white/40 transition-all duration-200;
 }
 
-@layer components {
+
   .inset-shadow {
     @apply absolute inset-0 rounded-full pointer-events-none 
       shadow-[inset_5px_5px_10px_rgba(0,0,0,0.15),inset_-2px_-2px_5px_rgba(255,255,255,0.35)];
   }
+
+
+.pastel-card {
+  @apply rounded-3xl px-6 py-5 text-black font-medium text-center border-[1.5px] border-solid 
+    shadow-[inset_0_4px_8px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.04),0_2px_6px_rgba(0,0,0,0.05)];
 }
+
+  .pastel-vanilla {
+    @apply pastel-card;
+    background-color:#FFF4D8;
+    border-color:#E6C98C; /* légèrement plus foncé */
+  }
+
+  .pastel-baby-powder {
+    @apply pastel-card;
+    background-color:#FDFBF7;
+    border-color:#D8D3C3; /* beige grisâtre */
+  }
+
+  .pastel-purple {
+    @apply pastel-card;
+    background-color:#F7F0FF;
+    border-color:#D0C0EC; /* violet doux mais plus foncé */
+  }
+
+  .pastel-yellow {
+    @apply pastel-card;
+    background-color:#FEF9EC;
+    border-color:#E9D8A6; /* jaune doux foncé */
+  }
+
+  .pastel-image {
+  @apply rounded-3xl border-[1.5px] border-solid border-[#D3D3D3] 
+    shadow-[inset_0_4px_8px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.04),0_2px_6px_rgba(0,0,0,0.05)];
+}
+
+}
+
+
