@@ -1,0 +1,21 @@
+{% extends "diary/base.html" %}
+{% load static %}
+
+{% block title %}Suivi de mes rêves{% endblock %}
+
+{% block content %}
+<div class="text-center">
+  <h1 class="text-3xl text-black mb-6">Suivi de mes rêves</h1>
+  <p class="text-gray-500 mb-10">Cette section est en cours de développement...</p>
+
+  <!-- Boutons d’action -->
+  <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+    <a href="{% url 'dream_diary' %}" class="btn-ballon">
+      Retour au journal
+    </a>
+    <a href="{% url 'dream_recorder' %}" class="btn-ballon">
+      Enregistrer un rêve
+    </a>
+  </div>
+</div>
+{% endblock %}

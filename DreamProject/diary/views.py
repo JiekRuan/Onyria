@@ -83,3 +83,9 @@ def analyse_from_voice(request):
             return JsonResponse({'success': False, 'error': str(e)})
 
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio transmis'})
+
+@login_required
+def dream_followup(request):
+    """Page de suivi des rêves (placeholder)"""
+    return render(request, 'diary/dream_followup.html')
+

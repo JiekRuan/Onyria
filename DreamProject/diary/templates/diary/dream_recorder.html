@@ -63,6 +63,12 @@
     <div id="imageRevee" class="flex justify-center"></div>
   </div>
 
+  <!-- Boutons de navigation -->
+   <div id="sectionNavigation" class="flex justify-center gap-4 mt-8 hidden">
+    <a href="{% url 'dream_diary' %}" class="btn-ballon w-1/2 text-center">Retour au journal</a>
+    <a href="{% url 'dream_followup' %}" class="btn-ballon w-1/2 text-center">Suivi de mes rêves</a>
+  </div>
+
 </div>
 
 <script>
@@ -205,7 +211,10 @@
       showStatus("Erreur: " + err.message);
     }
 
-    recordBtn.textContent = "Enregistrer";
+    recordBtn.style.display = "none";
+
+    document.getElementById("sectionNavigation").style.display = "flex";
+
   }
 
   function showStatus(message) {
