@@ -154,12 +154,26 @@
 
       const result = await response.json();
 
+      const emotionLabels = {
+        heureux: "Heureux",
+        anxieux: "Anxieux",
+        triste: "Triste",
+        en_colere: "En colère",
+        fatigue: "Fatigué",
+        apeure: "Apeuré",
+        surpris: "Surpris",
+        serein: "Serein"
+      };
+
       if (result.success) {
         transcriptionText.textContent = result.transcription;
         sectionTranscription.style.display = "block";
 
-        emotionDominante.textContent = `${capitalize(result.dominant_emotion[0])} (${(result.dominant_emotion[1] * 100).toFixed(1)}%)`;
-        dreamType.textContent = result.dream_type;
+        const rawEmotion = result.dominant_emotion[0];
+        emotionDominante.textContent = emotionLabels[rawEmotion] || capitalize(rawEmotion);
+
+        dreamType.textContent = capitalize(result.dream_type);
+
         sectionEmotionDream.style.display = "flex";
 
         for (const [key, val] of Object.entries(result.interpretation)) {
@@ -174,7 +188,7 @@
         sectionInterpretation.style.display = "block";
 
         const imagePath = result.image_path || "{% static 'img/placeholder.png' %}";
-        imageRevee.innerHTML = ""; // Clear any previous content
+        imageRevee.innerHTML = "";
         const img = document.createElement("img");
         img.src = imagePath;
         img.alt = "Image du rêve";
