@@ -5,71 +5,67 @@
 
 {% block content %}
 
-  <!-- Contenu interne avec un léger padding -->
-<div class="p-6">
-
     <!-- Titre -->
-  <h1 class="text-3xl text-center text-black mb-6">Raconte ton rêve à voix haute</h1>
-  
- <!-- Bouton d'enregistrement -->
-    <div class="text-center mb-6">
-    <button id="recordBtn" class="btn-ballon-sm">
-      Enregistrer
-    </button>
-  </div>
+    <h1 class="text-3xl text-center text-black mb-8">Raconte ton rêve à voix haute</h1>
+    
+  <!-- Bouton d'enregistrement -->
+      <div class="text-center">
+      <button id="recordBtn" class="btn-ballon-sm">
+        Enregistrer
+      </button>
+    </div>
 
 
-    <!-- Timer -->
-  <div id="timer" class="text-center text-gray-600 mb-4 hidden">
-    Temps : <span id="timerText" class="font-mono">00:00</span>
-  </div>
+      <!-- Timer -->
+    <div id="timer" class="text-center text-gray-600 mt-4 hidden">
+      Temps : <span id="timerText" class="font-mono">00:00</span>
+    </div>
 
-    <!-- Statut -->
-  <div id="status" class="text-center text-sm text-gray-700 mb-6 hidden"></div>
+      <!-- Statut -->
+    <div id="status" class="text-center text-sm text-gray-700 mb-6 hidden"></div>
 
-  <!-- Bloc transcription -->
-  <div class="mb-6 mt-6 hidden" id="sectionTranscription">
-    <div class="pastel-baby-powder">
-      <h2 class="text-xl font-semibold text-black mb-3 text-center">Transcription</h2>
-      <div id="transcriptionText" class="text-black text-sm leading-relaxed">
-        Ton texte apparaîtra ici.
+    <!-- Bloc transcription -->
+    <div class="mb-6 mt-6 hidden" id="sectionTranscription">
+      <div class="pastel-baby-powder">
+        <h2 class="text-xl font-semibold text-black mb-3 text-center">Transcription</h2>
+        <div id="transcriptionText" class="text-black text-sm leading-relaxed">
+          Ton texte apparaîtra ici.
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Bloc émotion + type de rêve côte à côte -->
-  <div class="mb-6 hidden flex gap-4" id="sectionEmotionDream">
-    <div class="pastel-purple w-1/2">
-      <h3 class="text-xl font-semibold text-black mb-3 text-center">Émotion dominante</h3>
-      <div id="emotionDominante" class="text-black text-sm leading-relaxed text-center"></div>
+    <!-- Bloc émotion + type de rêve côte à côte -->
+    <div class="mb-6 hidden flex gap-4" id="sectionEmotionDream">
+      <div class="pastel-purple w-1/2">
+        <h3 class="text-xl font-semibold text-black mb-3 text-center">Émotion dominante</h3>
+        <div id="emotionDominante" class="text-black text-sm leading-relaxed text-center"></div>
+      </div>
+
+      <div class="pastel-vanilla w-1/2">
+        <h3 class="text-xl font-semibold text-black mb-3 text-center">Type de rêve</h3>
+        <div id="dreamType" class="text-black text-sm leading-relaxed text-center"></div>
+      </div>
     </div>
 
-    <div class="pastel-vanilla w-1/2">
-      <h3 class="text-xl font-semibold text-black mb-3 text-center">Type de rêve</h3>
-      <div id="dreamType" class="text-black text-sm leading-relaxed text-center"></div>
+    <!-- Bloc interprétation -->
+    <div class="mb-6 hidden" id="sectionInterpretation">
+      <div class="pastel-yellow">
+        <h3 class="text-xl font-semibold text-black mb-3 text-center">Interprétation</h3>
+        <div id="interpretation" class="text-black text-sm leading-relaxed space-y-4"></div>
+      </div>
     </div>
-  </div>
 
-  <!-- Bloc interprétation -->
-  <div class="mb-6 hidden" id="sectionInterpretation">
-    <div class="pastel-yellow">
-      <h3 class="text-xl font-semibold text-black mb-3 text-center">Interprétation</h3>
-      <div id="interpretation" class="text-black text-sm leading-relaxed space-y-4"></div>
+    <!-- Bloc image générée -->
+    <div id="sectionImage" class="hidden mb-2">
+      <div id="imageRevee" class="flex justify-center"></div>
     </div>
-  </div>
 
-  <!-- Bloc image générée -->
-  <div id="sectionImage" class="hidden mb-2">
-    <div id="imageRevee" class="flex justify-center"></div>
-  </div>
+    <!-- Boutons de navigation -->
+    <div id="sectionNavigation" class="flex justify-center gap-4 mt-6 flex-nowrap hidden">
+      <a href="{% url 'dream_diary' %}" class="btn-ballon">Retour au journal</a>
+      <a href="{% url 'dream_followup' %}" class="btn-ballon">Suivi de mes rêves</a>
+    </div>
 
-  <!-- Boutons de navigation -->
-   <div id="sectionNavigation" class="flex justify-center gap-4 mt-8 hidden">
-    <a href="{% url 'dream_diary' %}" class="btn-ballon w-1/2 text-center">Retour au journal</a>
-    <a href="{% url 'dream_followup' %}" class="btn-ballon w-1/2 text-center">Suivi de mes rêves</a>
-  </div>
-
-</div>
 
 <script>
   let mediaRecorder;
@@ -198,7 +194,7 @@
         const img = document.createElement("img");
         img.src = imagePath;
         img.alt = "Image du rêve";
-        img.className = "pastel-image w-full max-w-3xl aspect-[4/3] object-cover mx-auto";
+        img.className = "pastel-image w-full aspect-[4/3] object-cover mx-auto";
         imageRevee.appendChild(img);
 
         sectionImage.style.display = "block";
