@@ -66,7 +66,7 @@ def analyze_emotions(text):
     """Renvoie le score des émotions + l’émotion dominante"""
     system_prompt = read_file("context_emotion.txt")
     response = mistral_client.chat.complete(
-        model="mistral-large-latest",
+        model="mistral-medium",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text},
@@ -91,7 +91,7 @@ def interpret_dream(text):
     """Demande à Mistral une interprétation du rêve"""
     system_prompt = read_file("context_interpretation.txt")
     resp = mistral_client.chat.complete(
-        model="mistral-large-latest",
+        model="mistral-medium",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": text},

@@ -4,50 +4,68 @@
 {% block title %}Journal de rêves{% endblock %}
 
 {% block content %}
-<div class="bg-white bg-opacity-90 backdrop-blur rounded-xl shadow-lg">
+<!-- Bloc profil centré : photo + pseudo + mantra -->
+<div class="flex flex-col items-center justify-center text-center gap-2 mb-10 p-6">
 
-  <!-- Bloc profil -->
-  <div class="flex gap-6 mb-6 p-6">
-
-    <!-- Image de profil (agrandie) -->
-    <div class="flex-shrink-0">
+  <!-- Image de profil avec effet "trou" -->
+  <div class="relative w-32 h-32">
+    <div class="rounded-full overflow-hidden w-full h-full">
       {% if user.profile_picture %}
         <img src="{{ user.profile_picture.url }}" alt="Profil"
-             class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
+             class="w-full h-full object-cover rounded-full" />
       {% else %}
-        <img src="{% static 'profil-placeholder.png' %}" alt="Profil"
-             class="w-28 h-28 rounded-full object-cover border border-[#f0eafe] shadow-sm">
+        <img src="{% static 'img/profil_placeholder.png' %}" alt="Profil"
+             class="w-full h-full object-cover rounded-full" />
       {% endif %}
-    </div>
+      
+      <div class="absolute inset-0 inset-shadow"></div>
 
-    <!-- Nom d'utilisateur aligné en haut à droite -->
-    <div class="flex flex-col justify-start">
-      <h2 class="text-2xl font-semibold text-gray-800">{{ user.username }}</h2>
     </div>
-
   </div>
+
+  <!-- Nom -->
+  <h2 class="text-[1.3rem] font-semibold text-gray-800">{{ user.username }}</h2>
+
+    <div class="relative w-full flex justify-center px-4 mt-2">
+    <div class="relative max-w-[70%] text-center px-6">
+
+        <!-- Guillemets gauche -->
+        <img src="{% static 'img/left_quotation_marks.png' %}" alt="Guillemet gauche"
+            class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.35rem]" />
+
+        <!-- Guillemets droit -->
+        <img src="{% static 'img/right_quotation_marks.png' %}" alt="Guillemet droit"
+            class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.35rem]" />
+
+        <!-- Mantra/bio  -->
+        <p class="text-[0.95rem] text-black font-normal leading-tight">
+        La nuit, je deviens l’héroïne de mondes silencieux.
+        </p>
+
+    </div>
+    </div>
+
+
+</div>
 
   <!-- Ligne de séparation profil / images -->
   <hr class="border-t border-[#ede9f9]">
 
   <!-- Grille des rêves -->
-  <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1 p-6">
+    <div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-1 p-6">
     {% for dream in dreams %}
-      <div class="w-full aspect-square overflow-hidden rounded-lg">
-        {% if dream.image %}
-          <img src="{{ dream.image.url }}" alt="Rêve"
-               class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 rounded-lg">
-        {% else %}
-          <img src="{% static 'placeholder.png' %}" alt="Pas d’image"
-               class="w-full h-full object-cover opacity-50 rounded-lg">
-        {% endif %}
-      </div>
+        <div class="w-full aspect-square overflow-hidden rounded-md group transition-transform duration-300 hover:scale-105">
+        <img
+            src="{% if dream.image %}{{ dream.image.url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}"
+            alt="{% if dream.image %}Rêve{% else %}Pas d’image{% endif %}"
+            class="w-full h-full object-cover {% if not dream.image %}opacity-50{% endif %}"
+        >
+        </div>
     {% empty %}
-      <p class="col-span-full text-center text-gray-500 text-sm mt-6">
+        <p class="col-span-full text-center text-gray-500 text-sm mt-6">
         Aucun rêve enregistré pour l’instant.
-      </p>
+        </p>
     {% endfor %}
-  </div>
+    </div>
 
-</div>
 {% endblock %}

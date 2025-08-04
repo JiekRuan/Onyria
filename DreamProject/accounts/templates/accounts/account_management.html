@@ -1,0 +1,71 @@
+{% extends "accounts/base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Gérer mon compte{% endblock %}
+
+{% block content %}
+
+<!-- Titre -->
+<h2 class="text-3xl font-normal mb-6 text-center text-black">Gérer mon compte</h2>
+
+<!-- Conteneur principal -->
+<div class="relative w-32 h-32 mx-auto mb-6">
+
+  <!-- Photo de profil-->
+  <div class="rounded-full overflow-hidden w-full h-full">
+    {% if user.profile_picture %}
+      <img src="{{ user.profile_picture.url }}" alt="Photo de profil"
+           class="w-full h-full object-cover rounded-full" />
+    {% else %}
+      <img src="{% static 'img/profil_placeholder.png' %}" alt="Photo par défaut"
+           class="w-full h-full object-cover rounded-full" />
+    {% endif %}
+
+    <div class="absolute inset-0 inset-shadow"></div>
+
+  </div>
+
+  <!-- Bouton pencil -->
+  <form method="post" enctype="multipart/form-data" id="profile-picture-form">
+    {% csrf_token %}
+    <label for="id_profile_picture" class="absolute bottom-0 right-0 cursor-pointer">
+      <div class="btn-ballon-icon">
+        <img src="{% static 'img/pencil.png' %}" alt="Modifier"
+            class="w-4 h-4"
+            style="filter: brightness(0) saturate(100%) invert(16%) sepia(20%) saturate(2151%) hue-rotate(213deg) brightness(95%) contrast(90%);">
+      </div>
+    </label>
+    <!-- Champ file caché -->
+    <input type="file" name="profile_picture" id="id_profile_picture" class="hidden"
+           onchange="document.getElementById('profile-picture-form').submit();">
+  </form>
+</div>
+
+<!-- Infos utilisateur -->
+<div class="text-center mt-6 mb-8 space-y-1">
+  <h3 class="text-xl font-normal text-black">{{ user.username }}</h3>
+  <p class="text-sm text-black">{{ user.email }}</p>
+</div>
+
+<!-- Actions -->
+<div class="max-w-md mx-auto space-y-4">
+
+  <a href="{% url 'password_change' %}" class="btn-ballon">
+    Changer mon mot de passe
+  </a>
+
+  <a href="{% url 'delete_account' %}" class="btn-ballon">
+    Supprimer mon compte
+  </a>
+
+  <form action="{% url 'logout' %}" method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn-ballon">
+      Se déconnecter
+    </button>
+  </form>
+
+</div>
+
+{% endblock %}

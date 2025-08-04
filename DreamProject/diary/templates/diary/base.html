@@ -1,17 +1,46 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Onyria{% endblock %}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gradient-to-br from-purple-100 via-pink-50 to-indigo-100 min-h-screen px-4 py-8 flex items-center justify-center">
 
-  <div class="w-full max-w-5xl">
+  <!-- Tailwind CSS compilé localement -->
+  <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
+
+  <!-- Font-face locale pour Schibsted Grotesk -->
+  <style>
+    @font-face {
+      font-family: 'Schibsted Grotesk';
+      src: url("{% static 'Font/schibsted-grotesk-v6-latin-regular.woff2' %}") format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'Schibsted Grotesk';
+      src: url("{% static 'Font/schibsted-grotesk-v6-latin-500.woff2' %}") format('woff2');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: 'Schibsted Grotesk';
+      src: url("{% static 'Font/schibsted-grotesk-v6-latin-600.woff2' %}") format('woff2');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
+</head>
+
+<body class="bg-[#fdfbf7] min-h-screen flex items-center justify-center px-4 sm:px-6 py-8 font-grotesk">
+  <div class="w-full max-w-4xl mx-auto bg-white bg-opacity-80 backdrop-blur rounded-xl shadow-[0_4px_10px_rgba(0,0,0,0.1),_0_-4px_8px_rgba(0,0,0,0.05)] px-6 sm:px-8 md:px-10 py-8">
     {% block content %}
     {% endblock %}
   </div>
-
 </body>
 </html>
