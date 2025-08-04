@@ -10,7 +10,8 @@
     text-[#4e3f86] font-semibold py-2.5 px-5 
     rounded-full border border-[1.5px] border-[#b9a8ec]
     shadow-[inset_0_3px_3px_rgba(255,255,255,0.7),inset_0_-4px_7px_rgba(0,0,0,0.12),0_6px_14px_rgba(0,0,0,0.12)]
-    ring-1 ring-white/40 transition-all duration-200;
+    ring-1 ring-white/40 transition-all duration-200
+    flex items-center justify-center min-w-[12rem] min-h-[3rem];
 }
 
 .btn-ballon-sm {
