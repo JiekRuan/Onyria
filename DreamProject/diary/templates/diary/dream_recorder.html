@@ -54,7 +54,7 @@
   <div class="mb-6 hidden" id="sectionInterpretation">
     <div class="pastel-yellow">
       <h3 class="text-xl font-semibold text-black mb-3 text-center">Interprétation</h3>
-      <div id="interpretation" class="text-black text-sm leading-relaxed"></div>
+      <div id="interpretation" class="text-black text-sm leading-relaxed space-y-4"></div>
     </div>
   </div>
 
@@ -162,15 +162,15 @@
         dreamType.textContent = result.dream_type;
         sectionEmotionDream.style.display = "flex";
 
-        interpretation.innerHTML = "";
         for (const [key, val] of Object.entries(result.interpretation)) {
-          const p = document.createElement("p");
-          const strong = document.createElement("strong");
-          strong.textContent = capitalize(key);
-          p.appendChild(strong);
-          p.appendChild(document.createTextNode(` : ${val}`));
-          interpretation.appendChild(p);
-        }
+        const p = document.createElement("p");
+        p.className = "text-left"; 
+        const strong = document.createElement("strong");
+        strong.textContent = capitalize(key);
+        p.appendChild(strong);
+        p.appendChild(document.createTextNode(` : ${val}`));
+        interpretation.appendChild(p);
+      }
         sectionInterpretation.style.display = "block";
 
         const imagePath = result.image_path || "{% static 'img/placeholder.png' %}";
