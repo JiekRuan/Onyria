@@ -6,5 +6,5 @@ urlpatterns = [
     path('record/', views.dream_recorder_view, name='dream_recorder'),
     path('transcribe/', views.transcribe, name='transcribe'),
     path('analyse_from_voice/', views.analyse_from_voice, name='analyse_from_voice'),
-    path('followup/', views.diary_followup, name='diary_followup'),
+    path('followup/', views.dream_followup, name='dream_followup'),
 ]
