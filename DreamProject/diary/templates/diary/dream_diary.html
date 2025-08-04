@@ -55,9 +55,9 @@
 <hr class="border-t border-[#ede9f9] mb-6">
 
 <!-- Grille des rêves -->
-<div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 gap-1">
+<div id="dream-grid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-1">
   {% for dream in dreams %}
-    <div class="w-full aspect-square overflow-hidden rounded-md group transition-transform duration-300 hover:scale-105">
+    <div class="dream-tile hidden w-full aspect-square overflow-hidden rounded-md group transition-transform duration-300 hover:scale-105">
       <img
         src="{% if dream.image %}{{ dream.image.url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}"
         alt="{% if dream.image %}Rêve{% else %}Pas d’image{% endif %}"
@@ -70,5 +70,39 @@
     </p>
   {% endfor %}
 </div>
+
+<!-- Lien Afficher plus -->
+<div class="col-span-full flex justify-center mt-4">
+  <button id="loadMoreBtn">
+    <img src="{% static 'img/show_more_arrow.png' %}" alt="Afficher plus de rêves" class="h-10">
+  </button>
+</div>
+
+
+<!-- Script -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const tiles = document.querySelectorAll('.dream-tile');
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    let currentIndex = 0;
+    const initialDisplay = 18;
+    const loadMoreStep = 12;
+
+    function showNextChunk(step) {
+      const nextIndex = Math.min(currentIndex + step, tiles.length);
+      for (let i = currentIndex; i < nextIndex; i++) {
+        tiles[i].classList.remove('hidden');
+      }
+      currentIndex = nextIndex;
+
+      if (currentIndex >= tiles.length) {
+        loadMoreBtn.style.display = 'none';
+      }
+    }
+
+    showNextChunk(initialDisplay); // Affiche les 16 premiers au chargement
+    loadMoreBtn.addEventListener('click', () => showNextChunk(loadMoreStep));
+  });
+</script>
 
 {% endblock %}
