@@ -9,7 +9,7 @@
 <div class="flex flex-col items-center justify-center text-center gap-2 mb-10">
 
   <!-- Image de profil avec effet "trou" -->
-  <div class="relative w-32 h-32">
+  <div class="relative w-36 h-36">
     <div class="rounded-full overflow-hidden w-full h-full">
       {% if user.profile_picture %}
         <img src="{{ user.profile_picture.url }}" alt="Profil"
@@ -23,16 +23,16 @@
   </div>
 
   <!-- Nom -->
-  <h2 class="text-[1.3rem] font-semibold text-gray-800">{{ user.username }}</h2>
+  <h2 class="text-[1.4rem] font-semibold text-gray-800">{{ user.username }}</h2>
 
   <!-- Bio avec guillemets -->
   <div class="relative w-full flex justify-center">
     <div class="relative max-w-[70%] text-center">
       <img src="{% static 'img/left_quotation_marks.png' %}" alt="Guillemet gauche"
-           class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.35rem]" />
+           class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.45rem]" />
       <img src="{% static 'img/right_quotation_marks.png' %}" alt="Guillemet droit"
-           class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.35rem]" />
-      <p class="text-[0.95rem] text-black font-normal leading-tight px-6">
+           class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.45rem]" />
+      <p class="text-[1.05rem] text-black font-normal leading-tight px-6">
         La nuit, je deviens l'héroïne de mondes silencieux.
       </p>
     </div>
@@ -46,26 +46,26 @@
 
     <!-- Rêves/cauchemars -->
     <div class="text-center pastel-yellow mb-6">
-      <h2 class="text-sm sm:text-base md:text-lg font-normal">Profil onirique</h2>
-      <p class="text-base sm:text-lg md:text-xl font-semibold text-black">{{ statut_reveuse }}</p>
-      <p class="text-xs sm:text-sm md:text-sm text-gray-500 mt-1">
+      <h2 class="text-xs sm:text-sm md:text-base font-normal">Profil onirique</h2>
+      <p class="text-sm sm:text-base md:text-lg font-semibold text-black">{{ statut_reveuse }}</p>
+      <p class="text-xs sm:text-xs md:text-sm text-gray-500 mt-1">
         {{ pourcentage_reveuse }}% de {{ label_reveuse }}
       </p>
     </div>
 
     <!-- Émotion dominante -->
     <div class="text-center pastel-vanilla mb-6">
-      <h2 class="text-sm sm:text-base md:text-lg font-normal">Émotion dominante</h2>
-      <p class="text-base sm:text-lg md:text-xl font-semibold text-black">{{ emotion_dominante }}</p>
-      <p class="text-xs sm:text-sm md:text-sm text-gray-500 mt-1">
+      <h2 class="text-xs sm:text-sm md:text-base font-normal">Émotion dominante</h2>
+      <p class="text-sm sm:text-base md:text-lg font-semibold text-black">{{ emotion_dominante }}</p>
+      <p class="text-xs sm:text-xs md:text-sm text-gray-500 mt-1">
         dans {{ emotion_dominante_percentage }}% des cas
       </p>
     </div>
 
     <!-- Thématique récurrente -->
     <div class="text-center pastel-baby-powder mb-6">
-      <h2 class="text-sm sm:text-base md:text-lg font-normal">Thématique récurrente</h2>
-      <p class="text-base sm:text-lg md:text-xl font-semibold text-black">À venir...</p>
+      <h2 class="text-xs sm:text-sm md:text-base font-normal">Thématique récurrente</h2>
+      <p class="text-sm sm:text-base md:text-lg font-semibold text-black">À venir...</p>
     </div>
 
 </div>
