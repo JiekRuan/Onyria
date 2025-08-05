@@ -149,25 +149,13 @@
 
       const result = await response.json();
 
-      const emotionLabels = {
-        heureux: "Heureux",
-        anxieux: "Anxieux",
-        triste: "Triste",
-        en_colere: "En colère",
-        fatigue: "Fatigué",
-        apeure: "Apeuré",
-        surpris: "Surpris",
-        serein: "Serein"
-      };
-
       if (result.success) {
         transcriptionText.textContent = result.transcription;
         sectionTranscription.style.display = "block";
 
-        const rawEmotion = result.dominant_emotion[0];
-        emotionDominante.textContent = emotionLabels[rawEmotion] || capitalize(rawEmotion);
+        emotionDominante.textContent = result.dominant_emotion[0];
 
-        dreamType.textContent = capitalize(result.dream_type);
+        dreamType.textContent = result.dream_type;
 
         sectionEmotionDream.style.display = "flex";
 

@@ -14,6 +14,23 @@ from .utils import (
     get_profil_onirique_stats
 )
 
+# Dictionnaires de labels partagés
+EMOTION_LABELS = {
+    'heureux': 'Heureux',
+    'anxieux': 'Anxieux',
+    'triste': 'Triste',
+    'en_colere': 'En colère',
+    'fatigue': 'Fatigué',
+    'apeure': 'Apeuré',
+    'surpris': 'Surpris',
+    'serein': 'Serein'
+}
+
+DREAM_TYPE_LABELS = {
+    'reve': 'Rêve',
+    'cauchemar': 'Cauchemar'
+}
+
 # ----- Vues principales ----- #
 
 @login_required
@@ -21,6 +38,13 @@ def dream_diary_view(request):
     dreams = Dream.objects.filter(user=request.user).order_by('-created_at')
 
     stats = get_profil_onirique_stats(request.user)
+    
+    # Formatage des labels pour l'affichage
+    if 'emotion_dominante' in stats:
+        stats['emotion_dominante'] = EMOTION_LABELS.get(stats['emotion_dominante'], stats['emotion_dominante'].capitalize())
+    
+    if 'statut_reveuse' in stats:
+        stats['statut_reveuse'] = DREAM_TYPE_LABELS.get(stats['statut_reveuse'], stats['statut_reveuse'].capitalize())
 
     return render(request, 'diary/dream_diary.html', {
         'dreams': dreams,
@@ -28,7 +52,7 @@ def dream_diary_view(request):
     })
 
 def dream_recorder_view(request):
-    """Page d’enregistrement vocal du rêve"""
+    """Page d'enregistrement vocal du rêve"""
     return render(request, 'diary/dream_recorder.html')
 
 @csrf_exempt
@@ -76,12 +100,16 @@ def analyse_from_voice(request):
 
             generate_image_from_text(request.user, transcription, dream)
 
+            # Formatage des labels pour la réponse JSON
+            formatted_dominant_emotion = EMOTION_LABELS.get(dominant_emotion[0], dominant_emotion[0].capitalize())
+            formatted_dream_type = DREAM_TYPE_LABELS.get(dream_type, dream_type.capitalize())
+
             return JsonResponse({
                 "success": True,
                 "transcription": transcription,
                 "emotions": emotions,
-                "dominant_emotion": dominant_emotion,
-                "dream_type": dream_type,
+                "dominant_emotion": [formatted_dominant_emotion],
+                "dream_type": formatted_dream_type,
                 "interpretation": interpretation,
                 "image_path": dream.image.url if dream.image else None,
             })
@@ -95,4 +123,3 @@ def analyse_from_voice(request):
 def dream_followup(request):
     """Page de suivi des rêves (placeholder)"""
     return render(request, 'diary/dream_followup.html')
-
