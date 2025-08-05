@@ -26,20 +26,51 @@
   <h2 class="text-[1.3rem] font-semibold text-gray-800">{{ user.username }}</h2>
 
   <!-- Bio avec guillemets -->
-  <div class="relative w-full flex justify-center mt-2">
+  <div class="relative w-full flex justify-center">
     <div class="relative max-w-[70%] text-center">
       <img src="{% static 'img/left_quotation_marks.png' %}" alt="Guillemet gauche"
            class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.35rem]" />
       <img src="{% static 'img/right_quotation_marks.png' %}" alt="Guillemet droit"
            class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.35rem]" />
       <p class="text-[0.95rem] text-black font-normal leading-tight px-6">
-        La nuit, je deviens l’héroïne de mondes silencieux.
+        La nuit, je deviens l'héroïne de mondes silencieux.
       </p>
     </div>
   </div>
 </div>
 
-<!-- Boutons d’action -->
+
+<!-- Suivi personnel -->
+
+<div class="grid grid-cols-3 gap-6 mt-8 mb-4">
+
+    <!-- Rêves/cauchemars -->
+    <div class="text-center pastel-yellow mb-6">
+      <h2 class="text-sm sm:text-base md:text-lg font-normal">Profil onirique</h2>
+      <p class="text-base sm:text-lg md:text-xl font-semibold text-black">{{ statut_reveuse }}</p>
+      <p class="text-xs sm:text-sm md:text-sm text-gray-500 mt-1">
+        {{ pourcentage_reveuse }}% de {{ label_reveuse }}
+      </p>
+    </div>
+
+    <!-- Émotion dominante -->
+    <div class="text-center pastel-vanilla mb-6">
+      <h2 class="text-sm sm:text-base md:text-lg font-normal">Émotion dominante</h2>
+      <p class="text-base sm:text-lg md:text-xl font-semibold text-black">{{ emotion_dominante }}</p>
+      <p class="text-xs sm:text-sm md:text-sm text-gray-500 mt-1">
+        dans {{ emotion_dominante_percentage }}% des cas
+      </p>
+    </div>
+
+    <!-- Thématique récurrente -->
+    <div class="text-center pastel-baby-powder mb-6">
+      <h2 class="text-sm sm:text-base md:text-lg font-normal">Thématique récurrente</h2>
+      <p class="text-base sm:text-lg md:text-xl font-semibold text-black">À venir...</p>
+    </div>
+
+</div>
+
+<!-- Boutons d'action -->
 <div class="flex justify-center gap-4 mb-6 flex-nowrap">
   <a href="{% url 'dream_recorder' %}" 
      class="btn-ballon">
@@ -60,13 +91,13 @@
     <div class="dream-tile hidden w-full aspect-square overflow-hidden rounded-md group transition-transform duration-300 hover:scale-105">
       <img
         src="{% if dream.image %}{{ dream.image.url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}"
-        alt="{% if dream.image %}Rêve{% else %}Pas d’image{% endif %}"
+        alt="{% if dream.image %}Rêve{% else %}Pas d'image{% endif %}"
         class="w-full h-full object-cover {% if not dream.image %}opacity-50{% endif %}"
       >
     </div>
   {% empty %}
     <p class="col-span-full text-center text-gray-500 text-sm mt-6">
-      Aucun rêve enregistré pour l’instant.
+      Aucun rêve enregistré pour l'instant.
     </p>
   {% endfor %}
 </div>
