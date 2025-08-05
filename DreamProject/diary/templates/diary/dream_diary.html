@@ -9,7 +9,7 @@
 <div class="flex flex-col items-center justify-center text-center gap-2 mb-10">
 
   <!-- Image de profil avec effet "trou" -->
-  <div class="relative w-32 h-32">
+  <div class="relative w-36 h-36">
     <div class="rounded-full overflow-hidden w-full h-full">
       {% if user.profile_picture %}
         <img src="{{ user.profile_picture.url }}" alt="Profil"
@@ -23,16 +23,16 @@
   </div>
 
   <!-- Nom -->
-  <h2 class="text-[1.3rem] font-semibold text-gray-800">{{ user.username }}</h2>
+  <h2 class="text-[1.4rem] font-semibold text-gray-800">{{ user.username }}</h2>
 
   <!-- Bio avec guillemets -->
   <div class="relative w-full flex justify-center">
     <div class="relative max-w-[70%] text-center">
       <img src="{% static 'img/left_quotation_marks.png' %}" alt="Guillemet gauche"
-           class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.35rem]" />
+           class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.45rem]" />
       <img src="{% static 'img/right_quotation_marks.png' %}" alt="Guillemet droit"
-           class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.35rem]" />
-      <p class="text-[0.95rem] text-black font-normal leading-tight px-6">
+           class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.45rem]" />
+      <p class="text-[1.05rem] text-black font-normal leading-tight px-6">
         La nuit, je deviens l'héroïne de mondes silencieux.
       </p>
     </div>
