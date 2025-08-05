@@ -25,8 +25,8 @@
 
 <!-- Bloc transcription -->
 <div class="mb-6 mt-6 hidden pastel-baby-powder" id="sectionTranscription">
-  <h2 class="text-sm sm:text-lg md:text-xl font-semibold mb-2">Transcription</h2>
-  <div id="transcriptionText" class="text-base sm:text-base md:text-lg font-normal leading-relaxed">
+  <h2 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Transcription</h2>
+  <div id="transcriptionText" class="text-xs sm:text-sm md:text-base font-normal leading-relaxed">
     Ton texte apparaîtra ici.
   </div>
 </div>
@@ -34,19 +34,19 @@
 <!-- Bloc émotion + type de rêve côte à côte -->
 <div class="mb-6 hidden flex gap-4" id="sectionEmotionDream">
   <div class="pastel-purple w-1/2">
-    <h3 class="text-sm sm:text-lg md:text-xl font-semibold mb-2">Émotion dominante</h3>
-    <div id="emotionDominante" class="text-base sm:text-base md:text-lg font-normal leading-relaxed"></div>
+    <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Émotion dominante</h3>
+    <div id="emotionDominante" class="text-xs sm:text-sm md:text-base font-normal leading-relaxed"></div>
   </div>
   <div class="pastel-vanilla w-1/2">
-    <h3 class="text-sm sm:text-lg md:text-xl font-semibold mb-2">Type de rêve</h3>
-    <div id="dreamType" class="text-base sm:text-base md:text-lg font-normal leading-relaxed"></div>
+    <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Type de rêve</h3>
+    <div id="dreamType" class="text-xs sm:text-sm md:text-base font-normal leading-relaxed"></div>
   </div>
 </div>
 
 <!-- Bloc interprétation -->
 <div class="mb-6 hidden pastel-yellow" id="sectionInterpretation">
-  <h3 class="text-sm sm:text-lg md:text-xl font-semibold mb-2">Interprétation</h3>
-  <div id="interpretation" class="text-sm sm:text-base md:text-lg font-normal leading-relaxed space-y-4 text-left"></div>
+  <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Interprétation</h3>
+  <div id="interpretation" class="text-xs sm:text-sm md:text-base font-normal leading-relaxed space-y-4 text-left"></div>
 </div>
 
 <!-- Bloc image générée -->
@@ -161,7 +161,7 @@
 
         for (const [key, val] of Object.entries(result.interpretation)) {
           const p = document.createElement("p");
-          p.className = "text-left text-sm sm:text-base md:text-lg font-normal";
+          p.className = "text-left text-xs sm:text-sm md:text-base font-normal";
           const strong = document.createElement("strong");
           strong.textContent = capitalize(key);
           p.appendChild(strong);
