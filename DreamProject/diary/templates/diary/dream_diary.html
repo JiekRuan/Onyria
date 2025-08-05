@@ -26,7 +26,7 @@
   <h2 class="text-[1.3rem] font-semibold text-gray-800">{{ user.username }}</h2>
 
   <!-- Bio avec guillemets -->
-  <div class="relative w-full flex justify-center mt-2">
+  <div class="relative w-full flex justify-center">
     <div class="relative max-w-[70%] text-center">
       <img src="{% static 'img/left_quotation_marks.png' %}" alt="Guillemet gauche"
            class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.35rem]" />
@@ -37,6 +37,37 @@
       </p>
     </div>
   </div>
+</div>
+
+
+<!-- Suivi personnel -->
+
+<div class="grid grid-cols-3 gap-6 mt-8 mb-4">
+
+    <!-- Rêves/cauchemars -->
+    <div class="text-center pastel-yellow mb-6">
+      <h2 class="text-sm sm:text-base md:text-lg font-normal">Profil onirique</h2>
+      <p class="text-base sm:text-lg md:text-xl font-semibold text-black">{{ statut_reveuse|capfirst }}</p>
+      <p class="text-xs sm:text-sm md:text-sm text-gray-500 mt-1">
+        {{ pourcentage_reveuse }}% de {{ label_reveuse }}
+      </p>
+    </div>
+
+    <!-- Émotion dominante -->
+    <div class="text-center pastel-vanilla mb-6">
+      <h2 class="text-sm sm:text-base md:text-lg font-normal">Émotion dominante</h2>
+      <p class="text-base sm:text-lg md:text-xl font-semibold text-black">{{ emotion_dominante }}</p>
+      <p class="text-xs sm:text-sm md:text-sm text-gray-500 mt-1">
+        dans {{ emotion_dominante_percentage }}% des cas
+      </p>
+    </div>
+
+    <!-- Thématique récurrente -->
+    <div class="text-center pastel-baby-powder mb-6">
+      <h2 class="text-sm sm:text-base md:text-lg font-normal">Thématique récurrente</h2>
+      <p class="text-base sm:text-lg md:text-xl font-semibold text-black italic">À venir...</p>
+    </div>
+
 </div>
 
 <!-- Boutons d’action -->

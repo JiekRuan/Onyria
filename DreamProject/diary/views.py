@@ -4,21 +4,28 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from .models import Dream
+from collections import Counter
 from .utils import (
     transcribe_audio,
     analyze_emotions,
     classify_dream,
     interpret_dream,
     generate_image_from_text,
+    get_profil_onirique_stats
 )
 
 # ----- Vues principales ----- #
 
 @login_required
 def dream_diary_view(request):
-    """Affiche tous les rêves de l’utilisateur sous forme de galerie"""
     dreams = Dream.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'diary/dream_diary.html', {'dreams': dreams})
+
+    stats = get_profil_onirique_stats(request.user)
+
+    return render(request, 'diary/dream_diary.html', {
+        'dreams': dreams,
+        **stats  # déstructure les clés du dict `stats` directement dans le contexte
+    })
 
 def dream_recorder_view(request):
     """Page d’enregistrement vocal du rêve"""
