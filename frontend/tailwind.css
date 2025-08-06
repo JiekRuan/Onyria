@@ -33,6 +33,23 @@
     ring-1 ring-white/40 transition-all duration-200;
 }
 
+.btn-ballon-record {
+  @apply relative w-20 h-20 rounded-full flex items-center justify-center
+    bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
+    hover:from-[#f0eafe] hover:to-[#cdbef4]
+    border border-[1.5px] border-[#b9a8ec]
+    shadow-[inset_0_3px_6px_rgba(255,255,255,0.7),inset_0_-4px_8px_rgba(0,0,0,0.15),0_6px_16px_rgba(0,0,0,0.12)]
+    ring-1 ring-white/40 transition-all duration-200
+    cursor-pointer;
+}
+
+.btn-ballon-record.recording {
+  @apply animate-pulse;
+}
+
+.btn-ballon-record.processing {
+  @apply opacity-75;
+}
 
   .inset-shadow {
     @apply absolute inset-0 rounded-full pointer-events-none 
@@ -75,5 +92,3 @@
 }
 
 }
-
-
