@@ -778,13 +778,12 @@ video {
 
 /*Style pour les photos de profil*/
 
-.purple-halo {
+.grey-border {
   position: relative;
-  z-index: 10;
   border-radius: 9999px;
-  border-width: 4.5px;
+  border-width: 2px;
   border-style: solid;
-  border-color: #e1d1f8;
+  border-color: #dedede;
 }
 
 .inset-shadow {
@@ -985,22 +984,6 @@ video {
 
 .mt-6 {
   margin-top: 1.5rem;
-}
-
-.mt-8 {
-  margin-top: 2rem;
-}
-
-.mt-2 {
-  margin-top: 0.5rem;
-}
-
-.mb-3 {
-  margin-bottom: 0.75rem;
-}
-
-.mt-3 {
-  margin-top: 0.75rem;
 }
 
 .block {

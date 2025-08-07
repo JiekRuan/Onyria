@@ -96,10 +96,10 @@
 
 /*Style pour les photos de profil*/
 
-  .purple-halo {
-     @apply relative z-10 border-[4.5px] border-solid rounded-full;
-    border-color: #e1d1f8;
-  }
+.grey-border {
+@apply relative border-[2px] border-solid rounded-full;
+border-color: #dedede;
+}
 
 .inset-shadow {
 @apply absolute inset-0 rounded-full pointer-events-none 
