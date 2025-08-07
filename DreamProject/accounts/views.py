@@ -2,10 +2,13 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.cache import never_cache
 from django.urls import reverse_lazy
 from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm, UserUpdateForm
 
 
+@require_http_methods(["GET", "POST"])
 def register_view(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
@@ -20,6 +23,8 @@ def register_view(request):
         form = RegisterForm()
     return render(request, 'accounts/register.html', {'form': form})
 
+@require_http_methods(["GET", "POST"])
+@never_cache
 def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -41,6 +46,7 @@ def login_view(request):
         form = LoginForm()
     return render(request, 'accounts/login.html', {'form': form})
 
+@require_http_methods(["GET", "POST"])
 @login_required
 def account_management_view(request):
     if request.method == 'POST':
@@ -53,12 +59,14 @@ def account_management_view(request):
 
     return render(request, 'accounts/account_management.html', {'form': form, 'user': request.user})
 
-
+@require_POST
 @login_required
+@never_cache
 def logout_view(request):
     logout(request)
     return redirect('login')  # Redirige vers la page de login après la déconnexion
 
+@require_http_methods(["GET", "POST"])
 @login_required
 def custom_password_change_view(request):
     if request.method == 'POST':
@@ -70,7 +78,7 @@ def custom_password_change_view(request):
         form = CustomPasswordChangeForm(user=request.user)
     return render(request, 'accounts/change_password.html', {'form': form})
 
-
+@require_http_methods(["GET", "POST"])
 @login_required
 def delete_account_view(request):
     if request.method == 'POST':

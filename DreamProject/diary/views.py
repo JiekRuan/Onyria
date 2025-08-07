@@ -2,6 +2,7 @@ import json
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from .models import Dream
 from collections import Counter
@@ -51,14 +52,16 @@ def dream_diary_view(request):
         **stats  # déstructure les clés du dict `stats` directement dans le contexte
     })
 
+@login_required
 def dream_recorder_view(request):
     """Page d'enregistrement vocal du rêve"""
     return render(request, 'diary/dream_recorder.html')
 
+@require_http_methods(["POST"])
 @csrf_exempt
 def transcribe(request):
     """API : reçoit audio et renvoie texte brut"""
-    if request.method == 'POST' and 'audio' in request.FILES:
+    if 'audio' in request.FILES:
         try:
             audio_file = request.FILES['audio']
             audio_data = audio_file.read()
@@ -71,10 +74,11 @@ def transcribe(request):
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio'})
 
-@csrf_exempt
+@require_http_methods(["POST"])
 @login_required
+@csrf_exempt
 def analyse_from_voice(request):
-    if request.method == 'POST' and 'audio' in request.FILES:
+    if 'audio' in request.FILES:
         try:
             audio_file = request.FILES['audio']
             audio_data = audio_file.read()
