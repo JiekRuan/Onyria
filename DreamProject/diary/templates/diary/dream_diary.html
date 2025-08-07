@@ -6,27 +6,28 @@
 {% block content %}
 
 <!-- Bloc profil -->
-<div class="flex flex-col items-center justify-center text-center gap-2 mb-10">
+<div class="flex flex-col items-center justify-center text-center gap-2 mb-6">
 
   <!-- Image de profil avec effet "trou" -->
-  <div class="relative w-36 h-36">
-    <div class="rounded-full overflow-hidden w-full h-full">
-      {% if user.profile_picture %}
-        <img src="{{ user.profile_picture.url }}" alt="Profil"
-             class="w-full h-full object-cover rounded-full" />
-      {% else %}
-        <img src="{% static 'img/profil_placeholder.png' %}" alt="Profil"
-             class="w-full h-full object-cover rounded-full" />
-      {% endif %}
-      <div class="absolute inset-0 inset-shadow"></div>
-    </div>
+  <div class="relative w-36 h-36 purple-halo">
+  <div class="rounded-full overflow-hidden w-full h-full">
+    {% if user.profile_picture %}
+      <img src="{{ user.profile_picture.url }}" alt="Profil"
+           class="w-full h-full object-cover rounded-full" />
+    {% else %}
+      <img src="{% static 'img/profil_placeholder.png' %}" alt="Profil"
+           class="w-full h-full object-cover rounded-full" />
+    {% endif %}
+    <div class="absolute inset-0 inset-shadow"></div>
   </div>
+</div>
+
 
   <!-- Nom -->
   <h2 class="text-[1.4rem] font-semibold text-gray-800">{{ user.username }}</h2>
 
   <!-- Bio avec guillemets -->
-  <div class="relative w-full flex justify-center">
+  <div class="relative w-full flex justify-center mb-2">
     <div class="relative max-w-[70%] text-center">
       <img src="{% static 'img/left_quotation_marks.png' %}" alt="Guillemet gauche"
            class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.45rem]" />
@@ -42,7 +43,7 @@
 
 <!-- Suivi personnel -->
 
-<div class="grid grid-cols-3 gap-6 mt-8">
+<div class="grid grid-cols-3 gap-6 ">
 
     <!-- Rêves/cauchemars -->
     <div class="text-center pastel-yellow mb-6">
