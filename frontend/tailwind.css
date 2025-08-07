@@ -57,7 +57,7 @@
 }
 
 .sidebar-item {
-  @apply flex items-center space-x-3 px-4 py-3 rounded-xl text-black font-medium
+  @apply flex items-center space-x-3 px-4 py-3 rounded-3xl text-black font-medium
     text-[1.05rem]
     transition-all duration-200 bg-transparent;
 }

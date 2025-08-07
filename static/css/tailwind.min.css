@@ -702,7 +702,7 @@ video {
 }
 
 .sidebar-item {
-  border-radius: 0.75rem;
+  border-radius: 1.5rem;
   background-color: transparent;
   padding-left: 1rem;
   padding-right: 1rem;
@@ -1070,6 +1070,10 @@ video {
   width: 100%;
 }
 
+.w-64 {
+  width: 16rem;
+}
+
 .max-w-4xl {
   max-width: 56rem;
 }
@@ -1115,10 +1119,6 @@ video {
 
 .flex-col {
   flex-direction: column;
-}
-
-.flex-nowrap {
-  flex-wrap: nowrap;
 }
 
 .items-center {
