@@ -51,11 +51,53 @@
   @apply opacity-75;
 }
 
-  .inset-shadow {
-    @apply absolute inset-0 rounded-full pointer-events-none 
-      shadow-[inset_5px_5px_10px_rgba(0,0,0,0.15),inset_-2px_-2px_5px_rgba(255,255,255,0.35)];
-  }
+/* Sidebar avec thème noir et style de vos boutons */
+.sidebar {
+  @apply flex flex-col bg-white border-r border-gray-200 shadow-lg;
+}
 
+.sidebar-item {
+  @apply flex items-center space-x-3 px-4 py-3 rounded-3xl text-black font-medium
+    text-[1.05rem]
+    transition-all duration-200 bg-transparent;
+}
+
+
+.sidebar-item:hover {
+  @apply bg-gradient-to-r from-[#f5f0ff] to-[#f0eafe] text-black
+    shadow-[inset_0_2px_4px_rgba(255,255,255,0.7),0_2px_6px_rgba(0,0,0,0.08)];
+}
+
+.sidebar-item.active {
+  @apply bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5] font-semibold text-[#4e3f86]
+    border border-[1.5px] border-[#b9a8ec]
+    shadow-[inset_0_3px_3px_rgba(255,255,255,0.7),inset_0_-4px_7px_rgba(0,0,0,0.12),0_6px_14px_rgba(0,0,0,0.12)];
+}
+
+.sidebar-item.logout-btn {
+  @apply text-[#4e3f86] font-semibold;
+}
+
+.sidebar-item.logout-btn:hover {
+  @apply bg-gradient-to-r from-[#f5f0ff] to-[#f0eafe] text-[#4e3f86];
+}
+
+.sidebar-item svg {
+  @apply flex-shrink-0;
+}
+
+.sidebar-nav {
+  @apply flex-1 overflow-y-auto;
+}
+
+.sidebar-footer {
+  @apply mt-auto;
+}
+
+.inset-shadow {
+@apply absolute inset-0 rounded-full pointer-events-none 
+    shadow-[inset_5px_5px_10px_rgba(0,0,0,0.15),inset_-2px_-2px_5px_rgba(255,255,255,0.35)];
+}
 
 .pastel-card {
   @apply rounded-3xl px-6 py-5 text-black font-medium text-center border-[1.5px] border-solid 
@@ -91,4 +133,21 @@
     shadow-[inset_0_4px_8px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.04),0_2px_6px_rgba(0,0,0,0.05)];
 }
 
+}
+
+/* Responsive sidebar */
+@media (max-width: 1279px) {
+  .sidebar {
+    @apply hidden !important;
+  }
+
+  .content-area {
+    margin-left: 0 !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .content-area {
+    margin-left: 16rem !important; /* 256px */
+  }
 }
