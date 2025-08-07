@@ -4,7 +4,9 @@
 <div class="sidebar fixed left-0 top-0 h-full w-62 bg-white border-r border-gray-200 shadow-lg z-50 flex flex-col">
   <!-- Logo/Header -->
   <div class="p-6 border-b border-gray-100 flex justify-center">
-    <img src="{% static 'img/Logo_ONYRIA.png' %}" alt="Onyria" class="h-[5.7rem] w-auto">
+    <a href="{% url 'dream_diary' %}" class="transition-opacity duration-200 hover:opacity-80">
+      <img src="{% static 'img/Logo_ONYRIA.png' %}" alt="Onyria" class="h-[5.7rem] w-auto">
+    </a>
   </div>
 
   <!-- Navigation principale -->

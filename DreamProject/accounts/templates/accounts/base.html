@@ -40,7 +40,9 @@
   <div class="w-full max-w-md p-8 bg-white bg-opacity-80 backdrop-blur rounded-xl shadow-[0_4px_10px_rgba(0,0,0,0.1),_0_-4px_8px_rgba(0,0,0,0.05)]">
 
     <!-- Logo -->
-    <img src="{% static 'img/Logo_ONYRIA.png' %}" alt="Logo Onyria" class="mx-auto mb-4 w-32">
+    <a href="{% url 'dream_diary' %}" class="block transition-opacity duration-200 hover:opacity-80">
+      <img src="{% static 'img/Logo_ONYRIA.png' %}" alt="Logo Onyria" class="mx-auto mb-4 w-32">
+    </a>
 
     {% block content %}
     {% endblock %}
