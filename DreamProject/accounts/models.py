@@ -16,6 +16,13 @@ class CustomUser(AbstractUser):
         blank=True,
         verbose_name="Photo de profil"
     )
+    bio = models.CharField(  # ← nouveau champ
+        "Bio",
+        max_length=180,
+        blank=True,
+        default="",
+        help_text="Une courte phrase (max 180 caractères)."
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
