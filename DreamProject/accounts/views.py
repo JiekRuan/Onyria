@@ -4,8 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.decorators.cache import never_cache
-from django.urls import reverse_lazy
-from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm, UserUpdateForm
+from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm, UserUpdateForm, BioForm
 
 
 @require_http_methods(["GET", "POST"])
@@ -87,3 +86,11 @@ def delete_account_view(request):
         logout(request)
         return redirect('login')  # Redirige vers la page d'accueil après la suppression du compte
     return render(request, 'accounts/delete_account.html')
+
+@login_required
+@require_POST
+def edit_bio(request):
+    form = BioForm(request.POST, instance=request.user)
+    if form.is_valid():
+        form.save()
+    return redirect("dream_diary")
