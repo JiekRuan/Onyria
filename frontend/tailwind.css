@@ -166,6 +166,22 @@ border-color: #dedede;
     shadow-[inset_0_4px_8px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.04),0_2px_6px_rgba(0,0,0,0.05)];
 }
 
+.bio-editable {
+  @apply transition-all duration-200 cursor-pointer rounded-full relative px-4 py-1;
+}
+
+.bio-editable:hover::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -20px;
+  right: -20px;
+  bottom: -4px;
+  background-color: rgb(243 244 246); /* bg-gray-100 */
+  border-radius: 9999px; /* full round */
+  z-index: -1;
+}
+
 }
 
 /* Responsive sidebar */

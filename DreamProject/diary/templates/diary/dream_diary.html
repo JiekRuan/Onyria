@@ -20,7 +20,7 @@
     {% endif %}
     <div class="absolute inset-0 inset-shadow"></div>
   </div>
-</div>
+  </div>
 
 
   <!-- Nom -->
@@ -33,8 +33,8 @@
         <img src="{% static 'img/right_quotation_marks.png' %}" class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.45rem]" />
 
         <!-- Texte affiché -->
-        <span id="bio-display" class="text-[1.05rem] text-black font-normal leading-tight px-6 cursor-pointer">
-        {{ user.bio|default:"La nuit, je deviens l'héroïne de mondes silencieux." }}
+<span id="bio-display" class="bio-editable text-[1.05rem] text-black font-normal leading-tight px-6">
+            {{ user.bio|default:"La nuit, je deviens l'héroïne de mondes silencieux." }}
         </span>
 
         <!-- Champ input (même style, caché au départ) -->
@@ -51,7 +51,7 @@
         </form>
     </div>
     </div>
-
+</div>  
 
 <!-- Suivi personnel -->
 
