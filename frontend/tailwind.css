@@ -1,3 +1,27 @@
+@font-face {
+  font-family: 'Schibsted Grotesk';
+  src: url('../Font/schibsted-grotesk-v6-latin-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Schibsted Grotesk';
+  src: url('../Font/schibsted-grotesk-v6-latin-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Schibsted Grotesk';
+  src: url('../Font/schibsted-grotesk-v6-latin-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -94,10 +118,19 @@
   @apply mt-auto;
 }
 
+/*Style pour les photos de profil*/
+
+.grey-border {
+@apply relative border-[2px] border-solid rounded-full;
+border-color: #dedede;
+}
+
 .inset-shadow {
 @apply absolute inset-0 rounded-full pointer-events-none 
     shadow-[inset_5px_5px_10px_rgba(0,0,0,0.15),inset_-2px_-2px_5px_rgba(255,255,255,0.35)];
 }
+
+/*Style des cartes pastel*/
 
 .pastel-card {
   @apply rounded-3xl px-6 py-5 text-black font-medium text-center border-[1.5px] border-solid 

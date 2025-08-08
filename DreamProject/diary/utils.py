@@ -146,33 +146,44 @@ def generate_image_from_text(user, prompt_text, dream_instance):
     except Exception:
         return False
     
-
+# ---------- PROFIL ONYRIQUE ----------
 
 def get_profil_onirique_stats(user):
     dreams = Dream.objects.filter(user=user)
     total = dreams.count()
 
-    # Statut rêveuse ou non
+    # Cas : aucun rêve enregistré
+    if total == 0:
+        return {
+            "statut_reveuse": "silence onirique",
+            "pourcentage_reveuse": 0,
+            "label_reveuse": "rêves enregistrés",
+            "emotion_dominante": "émotion endormie",
+            "emotion_dominante_percentage": 0,
+        }
+
+    # Statut rêve vs cauchemar
     nb_reves = dreams.filter(dream_type='rêve').count()
     nb_cauchemars = dreams.filter(dream_type='cauchemar').count()
 
     if nb_reves >= nb_cauchemars:
-        statut_reveuse = "rêveuse"
-        pourcentage = round((nb_reves / total) * 100) if total else 0
+        statut_reveuse = "âme rêveuse"
+        pourcentage = round((nb_reves / total) * 100)
         label = "rêves"
     else:
         statut_reveuse = "en proie aux cauchemars"
-        pourcentage = round((nb_cauchemars / total) * 100) if total else 0
+        pourcentage = round((nb_cauchemars / total) * 100)
         label = "cauchemars"
 
     # Émotion dominante
     emotions = dreams.values_list('dominant_emotion', flat=True)
     emotion_counts = Counter(emotions)
+
     if emotion_counts:
         emotion_dominante, count = emotion_counts.most_common(1)[0]
-        emotion_percentage = round((count / total) * 100) if total else 0
+        emotion_percentage = round((count / total) * 100)
     else:
-        emotion_dominante = "Non définie"
+        emotion_dominante = "émotion endormie"
         emotion_percentage = 0
 
     return {
@@ -182,4 +193,5 @@ def get_profil_onirique_stats(user):
         "emotion_dominante": emotion_dominante,
         "emotion_dominante_percentage": emotion_percentage,
     }
+
 

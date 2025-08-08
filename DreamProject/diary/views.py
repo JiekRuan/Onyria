@@ -17,14 +17,14 @@ from .utils import (
 
 # Dictionnaires de labels partagés
 EMOTION_LABELS = {
-    'heureux': 'Heureux',
-    'anxieux': 'Anxieux',
-    'triste': 'Triste',
-    'en_colere': 'En colère',
-    'fatigue': 'Fatigué',
-    'apeure': 'Apeuré',
-    'surpris': 'Surpris',
-    'serein': 'Serein'
+    'heureux': 'Joie',
+    'anxieux': 'Anxiété',
+    'triste': 'Tristesse',
+    'en_colere': 'Colère',
+    'fatigue': 'Fatigue',
+    'apeure': 'Peur',
+    'surpris': 'Surprise',
+    'serein': 'Sérénité'
 }
 
 DREAM_TYPE_LABELS = {
