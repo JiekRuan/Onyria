@@ -20,26 +20,43 @@
     {% endif %}
     <div class="absolute inset-0 inset-shadow"></div>
   </div>
-</div>
-
+  </div>
 
   <!-- Nom -->
   <h2 class="text-[1.4rem] font-semibold text-gray-800">{{ user.username }}</h2>
 
-  <!-- Bio avec guillemets -->
-  <div class="relative w-full flex justify-center mb-2">
-    <div class="relative max-w-[70%] text-center">
-      <img src="{% static 'img/left_quotation_marks.png' %}" alt="Guillemet gauche"
-           class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.45rem]" />
-      <img src="{% static 'img/right_quotation_marks.png' %}" alt="Guillemet droit"
-           class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.45rem]" />
-      <p class="text-[1.05rem] text-black font-normal leading-tight px-6">
-        La nuit, je deviens l'héroïne de mondes silencieux.
-      </p>
-    </div>
-  </div>
-</div>
+    <!-- Bio avec guillemets -->
+    <div class="relative w-full flex justify-center mb-2">
+        <div class="relative flex items-center justify-center max-w-[70%]">
+            <!-- Guillemet gauche -->
+            <img src="{% static 'img/left_quotation_marks.png' %}" class="w-[1.45rem] mr-2 flex-shrink-0" />
+            
+            <!-- Zone de texte/input -->
+            <div class="relative flex-1 min-w-0">
+                <!-- Texte affiché -->
+                <span id="bio-display" class="bio-editable block text-[1.05rem] text-black font-normal leading-tight text-center">
+                    {{ user.bio|default:"Chaque nuit, une nouvelle aventure commence." }}
+                </span>
 
+                <!-- Champ input -->
+                <form id="bio-form" method="post" action="{% url 'edit_bio' %}" class="hidden">
+                {% csrf_token %}
+                <input
+                    type="text"
+                    name="bio"
+                    id="bio-input"
+                    maxlength="180"
+                    class="bio-input"
+                    value="{{ user.bio }}"
+                />
+                </form>
+            </div>
+            
+            <!-- Guillemet droit -->
+            <img src="{% static 'img/right_quotation_marks.png' %}" class="w-[1.45rem] ml-2 flex-shrink-0" />
+        </div>
+    </div>
+</div>  
 
 <!-- Suivi personnel -->
 
@@ -121,8 +138,48 @@
     }
 
     showNextChunk(initialDisplay); // Affiche les 16 premiers au chargement
-    loadMoreBtn.addEventListener('click', () => showNextChunk(loadMoreStep));
-  });
+        loadMoreBtn.addEventListener('click', () => showNextChunk(loadMoreStep));
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+    const bioDisplay = document.getElementById("bio-display");
+    const bioForm = document.getElementById("bio-form");
+    const bioInput = document.getElementById("bio-input");
+
+    let originalValue = "";
+
+    // Quand on clique sur le texte → mode édition
+    bioDisplay.addEventListener("click", function () {
+        originalValue = bioDisplay.textContent.trim();
+        bioDisplay.classList.add("hidden");
+        bioForm.classList.remove("hidden");
+        bioInput.value = originalValue;
+        bioInput.focus();
+    });
+
+    // Enter = envoi
+    bioInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            bioForm.submit();
+        }
+    });
+
+    // Clic à l'extérieur = enregistrement si modifié
+    document.addEventListener("click", function (e) {
+        if (!bioForm.contains(e.target) && e.target !== bioDisplay && !bioForm.classList.contains("hidden")) {
+            const newValue = bioInput.value.trim();
+            if (newValue !== originalValue) {
+                bioForm.submit();
+            } else {
+                // Rien de changé → retour affichage
+                bioForm.classList.add("hidden");
+                bioDisplay.classList.remove("hidden");
+            }
+        }
+    });
+});
+
 </script>
 
 {% endblock %}
