@@ -22,34 +22,39 @@
   </div>
   </div>
 
-
   <!-- Nom -->
   <h2 class="text-[1.4rem] font-semibold text-gray-800">{{ user.username }}</h2>
 
     <!-- Bio avec guillemets -->
     <div class="relative w-full flex justify-center mb-2">
-    <div class="relative max-w-[70%] text-center">
-        <img src="{% static 'img/left_quotation_marks.png' %}" class="absolute top-1/2 -translate-y-1/2 -left-4 w-[1.45rem]" />
-        <img src="{% static 'img/right_quotation_marks.png' %}" class="absolute top-1/2 -translate-y-1/2 -right-4 w-[1.45rem]" />
+        <div class="relative flex items-center justify-center max-w-[70%]">
+            <!-- Guillemet gauche -->
+            <img src="{% static 'img/left_quotation_marks.png' %}" class="w-[1.45rem] mr-2 flex-shrink-0" />
+            
+            <!-- Zone de texte/input -->
+            <div class="relative flex-1 min-w-0">
+                <!-- Texte affiché -->
+                <span id="bio-display" class="bio-editable block text-[1.05rem] text-black font-normal leading-tight text-center">
+                    {{ user.bio|default:"La nuit, je deviens l'héroïne de mondes silencieux." }}
+                </span>
 
-        <!-- Texte affiché -->
-        <span id="bio-display" class="bio-editable text-[1.05rem] text-black font-normal leading-tight px-6">
-            {{ user.bio|default:"La nuit, je deviens l'héroïne de mondes silencieux." }}
-        </span>
-
-        <!-- Champ input (même style, caché au départ) -->
-        <form id="bio-form" method="post" action="{% url 'edit_bio' %}" class="hidden">
-        {% csrf_token %}
-        <input
-            type="text"
-            name="bio"
-            id="bio-input"
-            maxlength="180"
-            class="w-full rounded-xl border px-3 py-1 text-[1.05rem] text-black font-normal leading-tight"
-            value="{{ user.bio }}"
-        />
-        </form>
-    </div>
+                <!-- Champ input -->
+                <form id="bio-form" method="post" action="{% url 'edit_bio' %}" class="hidden">
+                {% csrf_token %}
+                <input
+                    type="text"
+                    name="bio"
+                    id="bio-input"
+                    maxlength="180"
+                    class="bio-input"
+                    value="{{ user.bio }}"
+                />
+                </form>
+            </div>
+            
+            <!-- Guillemet droit -->
+            <img src="{% static 'img/right_quotation_marks.png' %}" class="w-[1.45rem] ml-2 flex-shrink-0" />
+        </div>
     </div>
 </div>  
 
