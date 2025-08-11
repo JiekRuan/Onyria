@@ -149,11 +149,12 @@ border-color: #dedede;
     border-color:#D8D3C3; /* beige grisâtre */
   }
 
-  .pastel-purple {
-    @apply pastel-card;
-    background-color:#F7F0FF;
-    border-color:#D0C0EC; /* violet doux mais plus foncé */
-  }
+  .pastel-golden {
+  @apply pastel-card;
+  background-color: #FFF7E0; /* jaune pastel chaud */
+  border-color: #E6C36A;    /* doré doux */
+}
+
 
   .pastel-yellow {
     @apply pastel-card;
