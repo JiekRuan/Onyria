@@ -176,7 +176,7 @@ def classify_dream(emotions):
     
     if emotions is None:
         logger.warning("Classification impossible - émotions non disponibles")
-        return "rêve"
+        return None
     
     with open(os.path.join(BASE_DIR, "diary", "prompt", "reference_emotions.json")) as f:
         ref = json.load(f)
