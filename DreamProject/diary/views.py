@@ -14,23 +14,15 @@ from .utils import (
     generate_image_from_text,
     get_profil_onirique_stats
 )
+from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
 
-# Dictionnaires de labels partagés
-EMOTION_LABELS = {
-    'heureux': 'Joie',
-    'anxieux': 'Anxiété',
-    'triste': 'Tristesse',
-    'en_colere': 'Colère',
-    'fatigue': 'Fatigue',
-    'apeure': 'Peur',
-    'surpris': 'Surprise',
-    'serein': 'Sérénité'
-}
 
-DREAM_TYPE_LABELS = {
-    'reve': 'Rêve',
-    'cauchemar': 'Cauchemar'
-}
+def dream_analysis_error():
+    """Retourne une réponse JSON d'erreur standardisée"""
+    return JsonResponse({
+        'success': False, 
+        'error': DREAM_ERROR_MESSAGE
+    })
 
 # ----- Vues principales ----- #
 
@@ -41,11 +33,19 @@ def dream_diary_view(request):
     stats = get_profil_onirique_stats(request.user)
     
     # Formatage des labels pour l'affichage
-    if 'emotion_dominante' in stats:
-        stats['emotion_dominante'] = EMOTION_LABELS.get(stats['emotion_dominante'], stats['emotion_dominante'].capitalize())
+    emotion_dominante = stats.get('emotion_dominante')
+    if emotion_dominante:
+        stats['emotion_dominante'] = EMOTION_LABELS.get(
+            emotion_dominante, 
+            emotion_dominante.capitalize()
+        )
     
-    if 'statut_reveuse' in stats:
-        stats['statut_reveuse'] = DREAM_TYPE_LABELS.get(stats['statut_reveuse'], stats['statut_reveuse'].capitalize())
+    statut_reveuse = stats.get('statut_reveuse')
+    if statut_reveuse:
+        stats['statut_reveuse'] = DREAM_TYPE_LABELS.get(
+            statut_reveuse, 
+            statut_reveuse.capitalize()
+        )
 
     return render(request, 'diary/dream_diary.html', {
         'dreams': dreams,
@@ -83,15 +83,27 @@ def analyse_from_voice(request):
             audio_file = request.FILES['audio']
             audio_data = audio_file.read()
 
+            # Étape 1: Transcription
             transcription = transcribe_audio(audio_data)
             if not transcription:
-                return JsonResponse({'success': False, 'error': 'Échec de la transcription'})
+                return dream_analysis_error()
 
+            # Étape 2: Analyse des émotions
             emotions, dominant_emotion = analyze_emotions(transcription)
-            dream_type = classify_dream(emotions)
-            interpretation = interpret_dream(transcription)
+            if emotions is None or dominant_emotion is None:
+                return dream_analysis_error()
 
-            # Création du rêve
+            # Étape 3: Classification du rêve
+            dream_type = classify_dream(emotions)
+            if dream_type is None:
+                return dream_analysis_error()
+
+            # Étape 4: Interprétation
+            interpretation = interpret_dream(transcription)
+            if interpretation is None:
+                return dream_analysis_error()
+
+            # Si tout s'est bien passé, créer le rêve
             dream = Dream.objects.create(
                 user=request.user,
                 transcription=transcription,
@@ -102,6 +114,7 @@ def analyse_from_voice(request):
                 is_analyzed=True,
             )
 
+            # Génération d'image (peut échouer sans arrêter le processus)
             generate_image_from_text(request.user, transcription, dream)
 
             # Formatage des labels pour la réponse JSON
@@ -119,9 +132,12 @@ def analyse_from_voice(request):
             })
 
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+            return dream_analysis_error()
 
-    return JsonResponse({'success': False, 'error': 'Pas de fichier audio transmis'})
+    return JsonResponse({
+        'success': False, 
+        'error': 'Pas de fichier audio transmis'
+    })
 
 @login_required
 def dream_followup(request):
