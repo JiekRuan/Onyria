@@ -33,11 +33,19 @@ def dream_diary_view(request):
     stats = get_profil_onirique_stats(request.user)
     
     # Formatage des labels pour l'affichage
-    if 'emotion_dominante' in stats:
-        stats['emotion_dominante'] = EMOTION_LABELS.get(stats['emotion_dominante'], stats['emotion_dominante'].capitalize())
+    emotion_dominante = stats.get('emotion_dominante')
+    if emotion_dominante:
+        stats['emotion_dominante'] = EMOTION_LABELS.get(
+            emotion_dominante, 
+            emotion_dominante.capitalize()
+        )
     
-    if 'statut_reveuse' in stats:
-        stats['statut_reveuse'] = DREAM_TYPE_LABELS.get(stats['statut_reveuse'], stats['statut_reveuse'].capitalize())
+    statut_reveuse = stats.get('statut_reveuse')
+    if statut_reveuse:
+        stats['statut_reveuse'] = DREAM_TYPE_LABELS.get(
+            statut_reveuse, 
+            statut_reveuse.capitalize()
+        )
 
     return render(request, 'diary/dream_diary.html', {
         'dreams': dreams,
