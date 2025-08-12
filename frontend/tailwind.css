@@ -27,6 +27,9 @@
 @tailwind utilities;
 
 @layer components {
+
+/* Boutons */ 
+
  .btn-ballon {
   @apply block w-full text-center relative
     bg-gradient-to-b from-[#f5f0ff] to-[#d8c6f5]
@@ -74,6 +77,12 @@
 .btn-ballon-record.processing {
   @apply opacity-75;
 }
+
+/* couleur background */
+
+.bg-pastel-baby-powder {
+    background-color: #FDFBF7;
+  }
 
 /* Sidebar avec thème noir et style des boutons */
 

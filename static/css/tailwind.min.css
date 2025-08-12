@@ -580,6 +580,8 @@ video {
   --tw-backdrop-sepia:  ;
 }
 
+/* Boutons */
+
 .btn-ballon {
   position: relative;
   display: block;
@@ -709,6 +711,12 @@ video {
 
 .btn-ballon-record.processing {
   opacity: 0.75;
+}
+
+/* couleur background */
+
+.bg-pastel-baby-powder {
+  background-color: #FDFBF7;
 }
 
 /* Sidebar avec thème noir et style des boutons */
