@@ -150,12 +150,11 @@ background-color:#FDFBF7;
 border-color:#D8D3C3; /* beige grisâtre */
 }
 
-.pastel-golden {
+.pastel-champagne {
 @apply pastel-card;
-background-color: #FEFBF1; /* jaune crème très pâle */
-border-color: #EADBA6;    /* doré clair adouci */
+background-color: #FAF7F0; /* champagne très pâle */
+border-color: #E0D4B0;    /* champagne plus contrasté */
 }
-
 
 .pastel-yellow {
 @apply pastel-card;
