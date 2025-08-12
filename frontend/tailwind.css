@@ -75,7 +75,8 @@
   @apply opacity-75;
 }
 
-/* Sidebar avec thème noir et style de vos boutons */
+/* Sidebar avec thème noir et style des boutons */
+
 .sidebar {
   @apply flex flex-col bg-white border-r border-gray-200 shadow-lg;
 }
@@ -137,34 +138,34 @@ border-color: #dedede;
     shadow-[inset_0_4px_8px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.04),0_2px_6px_rgba(0,0,0,0.05)];
 }
 
-  .pastel-vanilla {
-    @apply pastel-card;
-    background-color:#FFF4D8;
-    border-color:#E6C98C; /* légèrement plus foncé */
-  }
+.pastel-vanilla {
+@apply pastel-card;
+background-color:#FFF4D8;
+border-color:#E6C98C; /* légèrement plus foncé */
+}
 
-  .pastel-baby-powder {
-    @apply pastel-card;
-    background-color:#FDFBF7;
-    border-color:#D8D3C3; /* beige grisâtre */
-  }
+.pastel-baby-powder {
+@apply pastel-card;
+background-color:#FDFBF7;
+border-color:#D8D3C3; /* beige grisâtre */
+}
 
-  .pastel-golden {
-  @apply pastel-card;
-  background-color: #FFF7E0; /* jaune pastel chaud */
-  border-color: #E6C36A;    /* doré doux */
+.pastel-golden {
+@apply pastel-card;
+background-color: #FEFBF1; /* jaune crème très pâle */
+border-color: #EADBA6;    /* doré clair adouci */
 }
 
 
-  .pastel-yellow {
-    @apply pastel-card;
-    background-color:#FEF9EC;
-    border-color:#E9D8A6; /* jaune doux foncé */
-  }
+.pastel-yellow {
+@apply pastel-card;
+background-color:#FEF9EC;
+border-color:#E9D8A6; /* jaune doux foncé */
+}
 
-  .pastel-image {
-  @apply rounded-3xl border-[1.5px] border-solid border-[#D3D3D3] 
-    shadow-[inset_0_4px_8px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.04),0_2px_6px_rgba(0,0,0,0.05)];
+.pastel-image {
+@apply rounded-3xl border-[1.5px] border-solid border-[#D3D3D3] 
+shadow-[inset_0_4px_8px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.04),0_2px_6px_rgba(0,0,0,0.05)];
 }
 
 /* Style pour bio éditable - VERSION PROPRE */
@@ -183,7 +184,8 @@ border-color: #dedede;
   transform: scale(1.02);
 }
 
-/* Style pour l'input en mode édition - VERSION PROPRE */
+/* Style pour la bio en mode édition */
+
 .bio-input {
   @apply w-full rounded-2xl border-2 border-gray-300 px-4 py-2
          text-[1.05rem] text-black font-normal leading-tight text-center
@@ -195,6 +197,7 @@ border-color: #dedede;
 }
 
 /* Responsive sidebar */
+
 @media (max-width: 1279px) {
   .sidebar {
     @apply hidden !important;
