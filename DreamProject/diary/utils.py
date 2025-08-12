@@ -46,6 +46,48 @@ def softmax(preds):
     total = sum(exp.values())
     return {k: v / total for k, v in exp.items()}
 
+def validate_and_fix_interpretation(interpretation_data):
+    """
+    Valide et corrige le format de l'interprétation si nécessaire
+    Garantit un format cohérent avec des valeurs string
+    """
+    if interpretation_data is None:
+        logger.warning("Interprétation None reçue")
+        return None
+    
+    expected_keys = ["Émotionnelle", "Symbolique", "Cognitivo-scientifique", "Freudien"]
+    fixed_interpretation = {}
+    
+    logger.info(f"Validation interprétation - Type reçu: {type(interpretation_data)}")
+    
+    for key in expected_keys:
+        if key in interpretation_data:
+            value = interpretation_data[key]
+            
+            # Si c'est un objet avec 'contenu', extraire le contenu
+            if isinstance(value, dict) and 'contenu' in value:
+                fixed_interpretation[key] = value['contenu']
+                logger.debug(f"Extraction contenu pour {key}")
+            # Si c'est un objet avec 'content', extraire le content  
+            elif isinstance(value, dict) and 'content' in value:
+                fixed_interpretation[key] = value['content']
+                logger.debug(f"Extraction content pour {key}")
+            # Si c'est déjà une string, la garder
+            elif isinstance(value, str):
+                fixed_interpretation[key] = value
+                logger.debug(f"String directe pour {key}")
+            # Sinon, convertir en string
+            else:
+                fixed_interpretation[key] = str(value)
+                logger.warning(f"Conversion forcée en string pour {key}: {type(value)}")
+        else:
+            # Clé manquante, ajouter un placeholder
+            fixed_interpretation[key] = "Interprétation non disponible"
+            logger.warning(f"Clé manquante: {key}")
+    
+    logger.info("Validation interprétation terminée avec succès")
+    return fixed_interpretation
+
 # ---------- TRANSCRIPTION ----------
 
 def transcribe_audio(audio_data, language="fr"):
@@ -195,7 +237,7 @@ def classify_dream(emotions):
 # ---------- INTERPRÉTATION ----------
 
 def interpret_dream(text):
-    """Demande à Mistral une interprétation du rêve avec fallback"""
+    """Demande à Mistral une interprétation du rêve avec fallback et validation"""
     logger.info("Début interprétation du rêve")
     
     system_prompt = read_file("context_interpretation.txt")
@@ -215,9 +257,19 @@ def interpret_dream(text):
         return None
     
     try:
-        interpretation = json.loads(response.choices[0].message.content)
-        logger.info("Interprétation générée avec succès")
-        return interpretation
+        raw_interpretation = json.loads(response.choices[0].message.content)
+        logger.info("Réponse IA reçue, validation en cours...")
+        
+        # Valider et corriger le format
+        validated_interpretation = validate_and_fix_interpretation(raw_interpretation)
+        
+        if validated_interpretation:
+            logger.info("Interprétation générée et validée avec succès")
+            return validated_interpretation
+        else:
+            logger.error("Échec validation interprétation")
+            return None
+            
     except (json.JSONDecodeError, KeyError) as e:
         logger.error(f"Erreur parsing interprétation: {e}")
         return None
