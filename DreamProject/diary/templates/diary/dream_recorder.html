@@ -178,13 +178,29 @@
 
         sectionEmotionDream.style.display = "flex";
 
+        interpretation.innerHTML = "";
+
+        // Gestion robuste de l'interprétation - compatible avec tous les formats
         for (const [key, val] of Object.entries(result.interpretation)) {
           const p = document.createElement("p");
-          p.className = "text-left text-xs sm:text-sm md:text-base font-normal";
+          p.className = "text-left text-xs sm:text-sm md:text-base font-normal mb-4";
           const strong = document.createElement("strong");
           strong.textContent = capitalize(key);
           p.appendChild(strong);
-          p.appendChild(document.createTextNode(` : ${val}`));
+          
+          // Extraction robuste du contenu
+          let content;
+          if (typeof val === 'string') {
+            content = val;
+          } else if (val && val.contenu) {
+            content = val.contenu;
+          } else if (val && val.content) {
+            content = val.content;
+          } else {
+            content = String(val);
+          }
+          
+          p.appendChild(document.createTextNode(` : ${content}`));
           interpretation.appendChild(p);
         }
 

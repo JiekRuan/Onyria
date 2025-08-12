@@ -6,6 +6,9 @@ import json
 import tempfile
 from .models import Dream
 from .utils import transcribe_audio, softmax, classify_dream
+from django.core.management.base import BaseCommand
+from diary.utils import interpret_dream
+import json
 
 User = get_user_model()
 
@@ -361,3 +364,43 @@ def test_analyse_from_voice_with_formatted_labels(self):
         # Vérification que les labels sont formatés
         self.assertEqual(data['dominant_emotion'], ['Heureux'])  # Pas 'heureux'
         self.assertEqual(data['dream_type'], 'Rêve')  # Pas 'reve'
+
+class Command(BaseCommand):
+    help = 'Teste le format de réponse de l\'interprétation'
+
+    def handle(self, *args, **options):
+        test_dreams = [
+            "J'ai rêvé d'un oiseau qui volait au-dessus de moi",
+            "Je courais dans un couloir sans fin",
+            "Ma mère me parlait dans une maison inconnue"
+        ]
+        
+        for i, dream_text in enumerate(test_dreams, 1):
+            self.stdout.write(f"\n=== Test {i}: {dream_text[:30]}... ===")
+            
+            try:
+                result = interpret_dream(dream_text)
+                
+                if result is None:
+                    self.stdout.write(self.style.ERROR("❌ Résultat None"))
+                    continue
+                
+                # Vérifier le format
+                expected_keys = ["Émotionnelle", "Symbolique", "Cognitivo-scientifique", "Freudien"]
+                
+                if not isinstance(result, dict):
+                    self.stdout.write(self.style.ERROR(f"❌ Type incorrect: {type(result)}"))
+                    continue
+                
+                for key in expected_keys:
+                    if key not in result:
+                        self.stdout.write(self.style.ERROR(f"❌ Clé manquante: {key}"))
+                    elif not isinstance(result[key], str):
+                        self.stdout.write(self.style.ERROR(f"❌ {key} n'est pas une string: {type(result[key])}"))
+                    else:
+                        self.stdout.write(self.style.SUCCESS(f"✅ {key}: OK"))
+                
+                self.stdout.write(self.style.SUCCESS("✅ Format valide"))
+                
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"❌ Erreur: {e}"))
