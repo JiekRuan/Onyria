@@ -46,3 +46,8 @@ media/
 **/migrations/*.pyc
 # garder les init uniquement si vide sinon :
 # **/migrations/
+
+
+# Fichiers CSS compilés
+static/css/tailwind.min.css
+*.min.css
