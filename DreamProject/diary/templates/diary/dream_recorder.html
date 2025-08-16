@@ -15,12 +15,10 @@
     <svg id="micIcon" class="w-8 h-8 text-[#4e3f86]" fill="currentColor" viewBox="0 0 20 20">
       <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
     </svg>
-    
     <!-- Icône stop -->
     <svg id="stopIcon" class="w-6 h-6 text-[#4e3f86] hidden" fill="currentColor" viewBox="0 0 24 24">
       <rect x="6" y="6" width="12" height="12" rx="2"></rect>
     </svg>
-    
     <!-- Icône loading -->
     <svg id="loadingIcon" class="w-8 h-8 text-[#4e3f86] hidden animate-spin" fill="none" viewBox="0 0 24 24">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -63,11 +61,13 @@
 </div>
 
 <!-- Bloc interprétation -->
-<div class="hidden pastel-champagne mb-2" id="sectionInterpretation">
+<div class="hidden pastel-champagne mb-6" id="sectionInterpretation">
   <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Interprétation</h3>
   <div id="interpretation" class="text-xs sm:text-sm md:text-base font-normal leading-relaxed space-y-4 text-left"></div>
+</div>
 
-  <!-- Avertissement-->
+<!-- Avertissement sous la carte, masqué au départ -->
+<div id="sectionDisclaimer" class="hidden mt-3">
   <details class="ai-disclaimer">
     <summary class="ai-disclaimer__summary">Avertissement</summary>
     <div class="ai-disclaimer__content">
@@ -75,7 +75,6 @@
       <p class="mt-1">Elles sont fournies pour votre exploration personnelle uniquement : elles ne constituent pas un avis médical ou thérapeutique et ne remplacent pas un accompagnement professionnel.</p>
     </div>
   </details>
-
 </div>
 
 <script>
@@ -100,6 +99,7 @@
   const sectionEmotionDream = document.getElementById("sectionEmotionDream");
   const sectionInterpretation = document.getElementById("sectionInterpretation");
   const sectionImage = document.getElementById("sectionImage");
+  const sectionDisclaimer = document.getElementById("sectionDisclaimer");
 
   const micIcon = document.getElementById("micIcon");
   const stopIcon = document.getElementById("stopIcon");
@@ -183,9 +183,7 @@
         sectionTranscription.style.display = "block";
 
         emotionDominante.textContent = result.dominant_emotion[0];
-
         dreamType.textContent = result.dream_type;
-
         sectionEmotionDream.style.display = "flex";
 
         interpretation.innerHTML = "";
@@ -209,12 +207,12 @@
           } else {
             content = String(val);
           }
-          
           p.appendChild(document.createTextNode(` : ${content}`));
           interpretation.appendChild(p);
         }
 
         sectionInterpretation.style.display = "block";
+        sectionDisclaimer.classList.remove("hidden"); // affiche l'avertissement sous la carte
 
         const imagePath = result.image_path || "{% static 'img/placeholder.png' %}";
         imageRevee.innerHTML = "";
@@ -238,7 +236,8 @@
     loadingIcon.classList.add("hidden");
     micIcon.classList.remove("hidden");
     recordBtn.style.display = "none";
-    document.getElementById("sectionNavigation").style.display = "flex";
+    const nav = document.getElementById("sectionNavigation");
+    if (nav) nav.style.display = "flex";
   }
 
   function showStatus(message) {
