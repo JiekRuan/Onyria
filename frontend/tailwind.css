@@ -133,22 +133,21 @@
     min-height:2.5rem;
   }
 
-  /* Avertissement sous la carte — bordure visible même fermé */
+    /* ===== Avertissement ===== */
     .ai-disclaimer{
     @apply rounded-2xl text-xs sm:text-sm md:text-base
             border-solid border-[1.5px];
-    border-color: var(--brand-400);           /* visible fermé */
-    --tw-shadow: none;                        /* pas de relief fermé */
+    border-color: var(--brand-400);           
+    --tw-shadow: none;                       
     box-shadow: var(--tw-ring-shadow), var(--tw-shadow);
     transition: background-color .15s ease, box-shadow .15s ease;
     }
 
     .ai-disclaimer[open]{
     background-color: var(--brand-50);
-    @apply u-elev u-shadow-card;              /* relief “ballon” quand ouvert */
+    @apply u-elev u-shadow-card;             
     }
 
-    /* Titre centré, flèche native masquée */
     .ai-disclaimer__summary{
     @apply cursor-pointer w-full text-center py-1 font-medium underline underline-offset-2;
     color: var(--brand-800);
@@ -157,7 +156,6 @@
     .ai-disclaimer__summary::-webkit-details-marker { display: none; }
     .ai-disclaimer__summary::marker { content: ""; }
 
-    /* Texte aligné à gauche */
     .ai-disclaimer__content{
     @apply mt-2 px-3 pb-2 text-left;
     color: var(--brand-800);
