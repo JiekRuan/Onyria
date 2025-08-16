@@ -202,6 +202,24 @@ shadow-[inset_0_4px_8px_rgba(255,255,255,0.6),inset_0_-2px_4px_rgba(0,0,0,0.04),
   min-height: 2.5rem;
 }
 
+
+/* Avertissement (Interprétation) */
+.ai-disclaimer {
+  @apply mt-4 mb-3 rounded-2xl text-xs sm:text-sm md:text-base
+         border-[1.5px] border-transparent;
+}
+.ai-disclaimer[open] {
+  @apply bg-[#f8f4fe] border-[#b9a8ec];
+}
+.ai-disclaimer__summary {
+  @apply cursor-pointer w-full text-center text-[#4e3f86] py-1 font-medium
+         underline underline-offset-2 decoration-[#4e3f86];
+}
+.ai-disclaimer__content {
+  @apply mt-2 px-3 pb-2 text-[#4e3f86] text-left;
+}
+
+
 }
 
 /* Responsive sidebar */
