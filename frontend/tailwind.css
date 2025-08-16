@@ -13,7 +13,6 @@
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Schibsted Grotesk';
   src: url('../Font/schibsted-grotesk-v6-latin-600.woff2') format('woff2');
@@ -137,7 +136,6 @@
   /* ===== Avertissement (Interprétation) ===== */
   .ai-disclaimer{
     @apply mt-4 mb-3 rounded-2xl text-xs sm:text-sm md:text-base border-[1.5px] border-transparent;
-    /* fermé : pas d’élévation */
   }
   .ai-disclaimer[open]{
     background-color:var(--brand-50);
@@ -148,6 +146,10 @@
     @apply cursor-pointer w-full text-center py-1 font-medium underline underline-offset-2;
     color:var(--brand-800); text-decoration-color:var(--brand-800);
   }
+  /* Supprime la flèche native */
+  .ai-disclaimer__summary::-webkit-details-marker { display: none; }
+  .ai-disclaimer__summary::marker { content: ""; }
+
   .ai-disclaimer__content{
     @apply mt-2 px-3 pb-2 text-left;
     color:var(--brand-800);
