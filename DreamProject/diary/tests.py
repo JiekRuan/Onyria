@@ -311,7 +311,7 @@ def test_emotion_dream_type_labels_consistency(self):
         self.assertTrue(DREAM_TYPE_LABELS[dream_type][0].isupper())
     
     # Vérifications spécifiques pour les accents et caractères spéciaux
-    self.assertEqual(DREAM_TYPE_LABELS['reve'], 'Rêve')
+    self.assertEqual(DREAM_TYPE_LABELS['rêve'], 'Rêve')
     self.assertEqual(EMOTION_LABELS['en_colere'], 'En colère')
     self.assertEqual(EMOTION_LABELS['apeure'], 'Apeuré')
 
@@ -340,7 +340,7 @@ def test_analyse_from_voice_with_formatted_labels(self):
         # Configuration des mocks
         mock_transcribe.return_value = "Rêve de test"
         mock_analyze.return_value = ({'heureux': 0.8}, ['heureux'])
-        mock_classify.return_value = 'reve'
+        mock_classify.return_value = 'rêve'
         mock_interpret.return_value = {'symbole': 'bonheur'}
         mock_generate.return_value = None
         

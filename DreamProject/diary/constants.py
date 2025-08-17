@@ -12,7 +12,7 @@ EMOTION_LABELS = {
 }
 
 DREAM_TYPE_LABELS = {
-    'reve': 'Rêve',
+    'rêve': 'Rêve',
     'cauchemar': 'Cauchemar'
 }
 
