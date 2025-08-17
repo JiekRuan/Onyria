@@ -69,7 +69,10 @@
 <!-- Avertissement -->
 <div id="sectionDisclaimer" class="hidden mt-3">
   <details class="ai-disclaimer">
-    <summary class="ai-disclaimer__summary">Avertissement</summary>
+    <summary class="ai-disclaimer__summary flex items-center gap-2">
+      <img src="{% static 'img/warning.png' %}" class="w-3 h-3 md:w-4 md:h-4 align-middle" aria-hidden="true" alt="">
+      <span>Avertissement aux Onyriens</span>
+    </summary>
     <div class="ai-disclaimer__content">
       <p>Les interprétations proposées sont générées par une IA à partir de sources variées et peuvent contenir des erreurs ou des approximations.</p>
       <p class="mt-1">Elles sont fournies pour votre exploration personnelle uniquement : elles ne constituent pas un avis médical ou thérapeutique et ne remplacent pas un accompagnement professionnel.</p>

@@ -149,10 +149,19 @@
     }
 
     .ai-disclaimer__summary{
-    @apply cursor-pointer w-full text-center py-1 font-medium underline underline-offset-2;
+    @apply cursor-pointer w-full py-1 font-medium underline underline-offset-2;
     color: var(--brand-800);
     text-decoration-color: var(--brand-800);
+
+    /* centrage réel + annule l'indent du chevron natif */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding-left: 0;
     }
+
+    /* masque le chevron */
     .ai-disclaimer__summary::-webkit-details-marker { display: none; }
     .ai-disclaimer__summary::marker { content: ""; }
 
