@@ -143,15 +143,18 @@
     transition: background-color .15s ease, box-shadow .15s ease;
     }
 
-    .ai-disclaimer[open]{
-    background-color: var(--brand-50);
-    @apply u-elev u-shadow-card;             
+    .ai-disclaimer[open] {
+      background-color: var(--brand-50);
+      @apply u-elev u-shadow-card px-6 py-5;
+    }
+
+    .ai-disclaimer[open] .ai-disclaimer__content {
+      @apply px-0;
     }
 
     .ai-disclaimer__title {
-      @apply text-[1.05rem] font-medium;
+      @apply font-medium text-[0.90rem] sm:text-[1rem] md:text-[1.05rem];
     }
-
 
     .ai-disclaimer__summary{
     @apply cursor-pointer w-full py-1 font-medium underline underline-offset-2;
