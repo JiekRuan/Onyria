@@ -148,6 +148,11 @@
     @apply u-elev u-shadow-card;             
     }
 
+    .ai-disclaimer__title {
+      @apply text-[1.05rem] font-medium;
+    }
+
+
     .ai-disclaimer__summary{
     @apply cursor-pointer w-full py-1 font-medium underline underline-offset-2;
     color: var(--brand-800);
