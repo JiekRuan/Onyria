@@ -1,6 +1,7 @@
 name: Daily Tests
 
 on:
+    push:
   # Tests quotidiens à 6h UTC
   schedule:
     - cron: '0 6 * * *'
