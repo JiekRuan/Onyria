@@ -1,8 +1,6 @@
 name: Tests Hebdomadaires Complets
 
 on:
-  push:
-  # Tests hebdomadaires le lundi à 2h UTC
   schedule:
     - cron: "0 2 * * 1"
 
@@ -11,11 +9,6 @@ on:
     inputs:
       full_coverage:
         description: "Générer rapport de couverture complet"
-        required: false
-        default: true
-        type: boolean
-      performance_tests:
-        description: "Exécuter tests de performance"
         required: false
         default: true
         type: boolean
@@ -52,7 +45,6 @@ jobs:
           GROQ_API_KEY: "fake-key-for-ci"
           MISTRAL_API_KEY: "fake-key-for-ci"
 
-  # Suite complète AI avec tous les scénarios
   ai-testing:
     name: "Tests des IA"
     runs-on: ubuntu-latest
