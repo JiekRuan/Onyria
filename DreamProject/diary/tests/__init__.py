@@ -46,6 +46,25 @@ Ordre recommandé pour debugging :
 4. test_ai        - Intégrations externes
 5. test_views     - Interface Django
 6. test_integration - Workflow complet
+
+=== PLANIFICATION AUTOMATISÉE ===
+
+    Tests en continu :
+- Sur chaque commit/PR : test_core uniquement (~10 sec)
+- Validation rapide des fonctionnalités critiques
+
+    Tests quotidiens (6h UTC / 8h Paris) :
+- Modules : test_core + test_models + test_utils (~45 sec)
+- Validation de la persistance et des calculs
+
+    Tests d'intégration quotidiens :
+- Modules : test_ai_functions + test_views + test_integration (~1m 35s)
+- Validation des workflows complets
+
+    Tests hebdomadaires (Lundi 2h UTC / 4h Paris) :
+- Suite complète avec couverture et performance
+- Rapport de sécurité (Bandit + Safety)
+- Tests de compatibilité Python (3.10, 3.11, 3.12)
 """
 
 # Import des modules de tests pour faciliter les imports
