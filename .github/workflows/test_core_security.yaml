@@ -40,6 +40,5 @@ jobs:
         python DreamProject/manage.py test diary.tests.test_core --verbosity=1 --parallel --keepdb
         python DreamProject/manage.py test diary.tests.test_security --verbosity=1 --parallel
       env:
-        SECRET_KEY: 'test-secret-key-for-ci'
         GROQ_API_KEY: 'fake-key-for-ci'
         MISTRAL_API_KEY: 'fake-key-for-ci'
