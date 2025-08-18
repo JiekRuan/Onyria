@@ -8,6 +8,7 @@ Usage: python manage.py test diary.tests.test_security
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from ..constants import TEST_USER_PASSWORD
 import tempfile
 import re
 
@@ -19,13 +20,13 @@ class SecurityTests(TestCase):
         self.user = User.objects.create_user(
             email='security@test.com',
             username='secuser',
-            password='testpass123',
+            password=TEST_USER_PASSWORD,
         )
         self.client = Client()
 
     def test_sql_injection_protection(self):
         """Test protection contre l'injection SQL"""
-        self.client.login(email='security@test.com', password='testpass123')
+        self.client.login(email='security@test.com', password='TEST_USER_PASSWORD')
 
         # Tentative d'injection dans les paramètres
         malicious_data = "'; DROP TABLE diary_dream; --"
@@ -45,7 +46,7 @@ class SecurityTests(TestCase):
         """
         from ..models import Dream
 
-        self.client.login(email='security@test.com', password='testpass123')
+        self.client.login(email='security@test.com', password='TEST_USER_PASSWORD')
 
         #  PAYLOAD MALVEILLANT SPÉCIFIQUE
         malicious_content = "<script>alert('XSS Attack!')</script>"
@@ -126,7 +127,7 @@ class SecurityTests(TestCase):
         other_user = User.objects.create_user(
             email='other@test.com',
             username='otheruser',
-            password='testpass123',
+            password='TEST_USER_PASSWORD',
         )
 
         from ..models import Dream
@@ -135,7 +136,7 @@ class SecurityTests(TestCase):
             user=other_user, transcription="Rêve privé de l'autre utilisateur"
         )
 
-        self.client.login(email='security@test.com', password='testpass123')
+        self.client.login(email='security@test.com', password='TEST_USER_PASSWORD')
 
         # Tentative d'accès direct par ID
         response = self.client.get(f'/diary/dream/{other_dream.id}/')
@@ -149,7 +150,7 @@ class SecurityTests(TestCase):
         """
         from ..models import Dream
 
-        self.client.login(email='security@test.com', password='testpass123')
+        self.client.login(email='security@test.com', password='TEST_USER_PASSWORD')
 
         # Créer un rêve avec interprétation malveillante
         dream = Dream.objects.create(

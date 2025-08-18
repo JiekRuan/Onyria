@@ -18,6 +18,7 @@ import json
 import tempfile
 import time
 
+from ..constants import TEST_USER_PASSWORD
 from ..models import Dream
 from ..utils import get_profil_onirique_stats
 
@@ -41,7 +42,7 @@ class CompleteUserJourneyTest(TestCase):
         self.user = User.objects.create_user(
             email='journey@example.com',
             username='journey_user',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.client = Client()
 
@@ -81,7 +82,7 @@ class CompleteUserJourneyTest(TestCase):
         mock_generate.return_value = True
         
         # Étape 1 : Connexion utilisateur
-        login_success = self.client.login(email='journey@example.com', password='testpass123')
+        login_success = self.client.login(email='journey@example.com', password=TEST_USER_PASSWORD)
         self.assertTrue(login_success)
         
         # Étape 2 : Accès au journal de rêves (doit être vide)
@@ -154,7 +155,7 @@ class CompleteUserJourneyTest(TestCase):
         
         Objectif : Tester l'évolution des statistiques avec plusieurs rêves
         """
-        self.client.login(email='journey@example.com', password='testpass123')
+        self.client.login(email='journey@example.com', password=TEST_USER_PASSWORD)
         
         # Créer plusieurs rêves directement pour tester l'évolution des stats
         dreams_data = [
@@ -196,7 +197,7 @@ class CompleteUserJourneyTest(TestCase):
         
         Objectif : Vérifier que l'utilisateur peut récupérer après une erreur
         """
-        self.client.login(email='journey@example.com', password='testpass123')
+        self.client.login(email='journey@example.com', password=TEST_USER_PASSWORD)
         
         # Simuler une première tentative qui échoue
         with patch('diary.views.transcribe_audio', return_value=None):
@@ -251,12 +252,12 @@ class MultiUserIsolationTest(TestCase):
         self.user1 = User.objects.create_user(
             email='user1@example.com',
             username='user1',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.user2 = User.objects.create_user(
             email='user2@example.com',
             username='user2',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.client = Client()
 
@@ -282,7 +283,7 @@ class MultiUserIsolationTest(TestCase):
         )
         
         # Test avec utilisateur 1
-        self.client.login(email='user1@example.com', password='testpass123')
+        self.client.login(email='user1@example.com', password=TEST_USER_PASSWORD)
         response = self.client.get(reverse('dream_diary'))
         
         dreams = response.context['dreams']
@@ -295,7 +296,7 @@ class MultiUserIsolationTest(TestCase):
         self.assertEqual(stats.get('statut_reveuse'), 'Âme rêveuse')
         
         # Test avec utilisateur 2
-        self.client.login(email='user2@example.com', password='testpass123')
+        self.client.login(email='user2@example.com', password=TEST_USER_PASSWORD)
         response = self.client.get(reverse('dream_diary'))
         
         dreams = response.context['dreams']
@@ -367,7 +368,7 @@ class MultiUserIsolationTest(TestCase):
         results = []
         
         # Analyser pour user1
-        self.client.login(email='user1@example.com', password='testpass123')
+        self.client.login(email='user1@example.com', password=TEST_USER_PASSWORD)
         with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
             audio_file.write(b'fake_audio_data')
             audio_file.seek(0)
@@ -378,7 +379,7 @@ class MultiUserIsolationTest(TestCase):
             results.append(('user1@example.com', json.loads(response.content)))
         
         # Analyser pour user2  
-        self.client.login(email='user2@example.com', password='testpass123')
+        self.client.login(email='user2@example.com', password=TEST_USER_PASSWORD)
         with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
             audio_file.write(b'fake_audio_data')
             audio_file.seek(0)
@@ -413,7 +414,7 @@ class DataConsistencyTest(TestCase):
         self.user = User.objects.create_user(
             email='consistency@example.com',
             username='consistency_user',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.client = Client()
 
@@ -449,7 +450,7 @@ class DataConsistencyTest(TestCase):
         dream.interpretation = interpretation_data
         dream.save()
         
-        self.client.login(email='consistency@example.com', password='testpass123')
+        self.client.login(email='consistency@example.com', password=TEST_USER_PASSWORD)
         
         # Tester la cohérence dans la vue journal
         response = self.client.get(reverse('dream_diary'))
@@ -541,7 +542,7 @@ class DataConsistencyTest(TestCase):
             is_analyzed=True
         )
         
-        self.client.login(email='consistency@example.com', password='testpass123')
+        self.client.login(email='consistency@example.com', password=TEST_USER_PASSWORD)
         
         # Test via l'API d'analyse (simulation)
         with patch('diary.views.transcribe_audio', return_value="Test"), \
@@ -585,7 +586,7 @@ class WorkflowRobustnessTest(TestCase):
         self.user = User.objects.create_user(
             email='robustness@example.com',
             username='robustness_user',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.client = Client()
 
@@ -595,7 +596,7 @@ class WorkflowRobustnessTest(TestCase):
         
         Objectif : Vérifier que l'app gère les pannes partielles gracieusement
         """
-        self.client.login(email='robustness@example.com', password='testpass123')
+        self.client.login(email='robustness@example.com', password=TEST_USER_PASSWORD)
         
         # Cas 1: Transcription réussit, mais analyse d'émotions échoue
         with patch('diary.views.transcribe_audio', return_value="Transcription OK"), \
@@ -626,7 +627,7 @@ class WorkflowRobustnessTest(TestCase):
              patch('diary.views.interpret_dream', return_value={'Émotionnelle': 'Test'}), \
              patch('diary.views.generate_image_from_text', return_value=False):  # Échec image
             
-            self.client.login(email='robustness@example.com', password='testpass123')
+            self.client.login(email='robustness@example.com', password=TEST_USER_PASSWORD)
             
             with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
                 audio_file.write(b'fake_audio_data')
@@ -662,7 +663,7 @@ class WorkflowRobustnessTest(TestCase):
                 is_analyzed=True
             )
         
-        self.client.login(email='robustness@example.com', password='testpass123')
+        self.client.login(email='robustness@example.com', password=TEST_USER_PASSWORD)
         
         # Test de performance de la vue journal
         start_time = time.time()

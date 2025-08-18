@@ -1,3 +1,4 @@
+from django.conf import settings
 
 # Dictionnaires de labels partagés
 EMOTION_LABELS = {
@@ -18,3 +19,5 @@ DREAM_TYPE_LABELS = {
 
 # Message d'erreur centralisé
 DREAM_ERROR_MESSAGE = 'Les fils de votre rêve se sont emmêlés... Laissez-moi démêler ce songe et tentez une nouvelle analyse.'
+
+TEST_USER_PASSWORD = settings.TEST_USER_PASSWORD

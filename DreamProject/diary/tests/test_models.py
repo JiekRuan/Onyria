@@ -26,6 +26,7 @@ import threading
 import unittest
 from collections import defaultdict
 
+from ..constants import TEST_USER_PASSWORD
 from ..models import Dream, dream_image_path
 
 User = get_user_model()
@@ -50,7 +51,7 @@ class DreamModelTest(TestCase):
         self.user = User.objects.create_user(
             email='test@example.com',
             username='testuser',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
     
     def test_create_basic_dream(self):
@@ -653,7 +654,7 @@ class DreamModelImageTest(TestCase):
         self.user = User.objects.create_user(
             email='test_images@example.com',
             username='testuser_images',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
 
     def create_test_image(self, format='JPEG', size=(100, 100)):
@@ -764,7 +765,7 @@ class DreamModelImageTest(TestCase):
         user2 = User.objects.create_user(
             email='user2@example.com',
             username='user2',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         
         image1 = self.create_test_image()
@@ -846,7 +847,7 @@ class DreamModelPerformanceTest(TestCase):
         self.user = User.objects.create_user(
             email='test_perf@example.com',
             username='testuser_perf',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
 
     def test_bulk_dream_creation_performance(self):

@@ -19,6 +19,7 @@ import json
 import tempfile
 
 from ..models import Dream
+from ..constants import TEST_USER_PASSWORD
 
 User = get_user_model()
 
@@ -39,7 +40,7 @@ class DreamDiaryViewTest(TestCase):
         self.user = User.objects.create_user(
             email='diary_view@example.com',
             username='diary_user',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.client = Client()
 
@@ -61,7 +62,7 @@ class DreamDiaryViewTest(TestCase):
         
         Objectif : Vérifier l'affichage pour un nouvel utilisateur
         """
-        self.client.login(email='diary_view@example.com', password='testpass123')
+        self.client.login(email='diary_view@example.com', password=TEST_USER_PASSWORD)
         
         response = self.client.get(reverse('dream_diary'))
         
@@ -101,7 +102,7 @@ class DreamDiaryViewTest(TestCase):
             )
             created_dreams.append(dream)
         
-        self.client.login(email='diary_view@example.com', password='testpass123')
+        self.client.login(email='diary_view@example.com', password=TEST_USER_PASSWORD)
         response = self.client.get(reverse('dream_diary'))
         
         # Vérifications
@@ -131,7 +132,7 @@ class DreamDiaryViewTest(TestCase):
             is_analyzed=True
         )
         
-        self.client.login(email='diary_view@example.com', password='testpass123')
+        self.client.login(email='diary_view@example.com', password=TEST_USER_PASSWORD)
         response = self.client.get(reverse('dream_diary'))
         
         # Vérifier que toutes les clés de contexte sont présentes
@@ -162,7 +163,7 @@ class DreamDiaryViewTest(TestCase):
             is_analyzed=True
         )
         
-        self.client.login(email='diary_view@example.com', password='testpass123')
+        self.client.login(email='diary_view@example.com', password=TEST_USER_PASSWORD)
         response = self.client.get(reverse('dream_diary'))
         
         # Vérifier le formatage des labels
@@ -179,7 +180,7 @@ class DreamDiaryViewTest(TestCase):
         other_user = User.objects.create_user(
             email='other@example.com',
             username='other_user',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         
         # Rêves de l'autre utilisateur
@@ -198,7 +199,7 @@ class DreamDiaryViewTest(TestCase):
             dominant_emotion="sérénité"
         )
         
-        self.client.login(email='diary_view@example.com', password='testpass123')
+        self.client.login(email='diary_view@example.com', password=TEST_USER_PASSWORD)
         response = self.client.get(reverse('dream_diary'))
         
         # Vérifier l'isolation
@@ -213,7 +214,7 @@ class DreamDiaryViewTest(TestCase):
         
         Objectif : Vérifier que le bon template est utilisé
         """
-        self.client.login(email='diary_view@example.com', password='testpass123')
+        self.client.login(email='diary_view@example.com', password=TEST_USER_PASSWORD)
         response = self.client.get(reverse('dream_diary'))
         
         self.assertTemplateUsed(response, 'diary/dream_diary.html')
@@ -237,7 +238,7 @@ class DreamDiaryViewTest(TestCase):
         
         Dream.objects.bulk_create(dreams_batch)
         
-        self.client.login(email='diary_view@example.com', password='testpass123')
+        self.client.login(email='diary_view@example.com', password=TEST_USER_PASSWORD)
         
         import time
         start_time = time.time()
@@ -266,7 +267,7 @@ class DreamRecorderViewTest(TestCase):
         self.user = User.objects.create_user(
             email='recorder@example.com',
             username='recorder_user',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.client = Client()
 
@@ -288,7 +289,7 @@ class DreamRecorderViewTest(TestCase):
         
         Objectif : Vérifier l'accès normal à la page d'enregistrement
         """
-        self.client.login(email='recorder@example.com', password='testpass123')
+        self.client.login(email='recorder@example.com', password=TEST_USER_PASSWORD)
         
         response = self.client.get(reverse('dream_recorder'))
         
@@ -302,7 +303,7 @@ class DreamRecorderViewTest(TestCase):
         
         Objectif : Vérifier que le bon template est utilisé
         """
-        self.client.login(email='recorder@example.com', password='testpass123')
+        self.client.login(email='recorder@example.com', password=TEST_USER_PASSWORD)
         response = self.client.get(reverse('dream_recorder'))
         
         self.assertTemplateUsed(response, 'diary/dream_recorder.html')
@@ -313,7 +314,7 @@ class DreamRecorderViewTest(TestCase):
         
         Objectif : Vérifier que le contexte est minimal et correct
         """
-        self.client.login(email='recorder@example.com', password='testpass123')
+        self.client.login(email='recorder@example.com', password=TEST_USER_PASSWORD)
         response = self.client.get(reverse('dream_recorder'))
         
         # La vue recorder n'a pas besoin de contexte spécial
@@ -336,7 +337,7 @@ class AnalyseFromVoiceViewTest(TestCase):
         self.user = User.objects.create_user(
             email='api@example.com',
             username='api_user', 
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.client = Client()
 
@@ -363,7 +364,7 @@ class AnalyseFromVoiceViewTest(TestCase):
         
         Objectif : Vérifier la méthode HTTP correcte
         """
-        self.client.login(email='api@example.com', password='testpass123')
+        self.client.login(email='api@example.com', password=TEST_USER_PASSWORD)
         
         # GET non autorisé
         response = self.client.get(reverse('analyse_from_voice'))
@@ -375,7 +376,7 @@ class AnalyseFromVoiceViewTest(TestCase):
         
         Objectif : Vérifier la validation des paramètres
         """
-        self.client.login(email='api@example.com', password='testpass123')
+        self.client.login(email='api@example.com', password=TEST_USER_PASSWORD)
         
         response = self.client.post(reverse('analyse_from_voice'))
         
@@ -408,7 +409,7 @@ class AnalyseFromVoiceViewTest(TestCase):
         }
         mock_generate.return_value = True
         
-        self.client.login(email='api@example.com', password='testpass123')
+        self.client.login(email='api@example.com', password=TEST_USER_PASSWORD)
         
         with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
             audio_file.write(b'fake_audio_data')
@@ -447,7 +448,7 @@ class AnalyseFromVoiceViewTest(TestCase):
         Objectif : Vérifier la gestion d'erreur au premier niveau
         """
         with patch('diary.views.transcribe_audio', return_value=None):
-            self.client.login(email='api@example.com', password='testpass123')
+            self.client.login(email='api@example.com', password=TEST_USER_PASSWORD)
             
             with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
                 audio_file.write(b'fake_audio_data')
@@ -471,7 +472,7 @@ class AnalyseFromVoiceViewTest(TestCase):
         Objectif : Vérifier que les exceptions sont gérées gracieusement
         """
         with patch('diary.views.transcribe_audio', side_effect=Exception("Erreur inattendue")):
-            self.client.login(email='api@example.com', password='testpass123')
+            self.client.login(email='api@example.com', password=TEST_USER_PASSWORD)
             
             with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
                 audio_file.write(b'fake_audio_data')
@@ -492,7 +493,7 @@ class AnalyseFromVoiceViewTest(TestCase):
         
         Objectif : Vérifier que l'API retourne du JSON
         """
-        self.client.login(email='api@example.com', password='testpass123')
+        self.client.login(email='api@example.com', password=TEST_USER_PASSWORD)
         
         response = self.client.post(reverse('analyse_from_voice'))
         
@@ -504,7 +505,7 @@ class AnalyseFromVoiceViewTest(TestCase):
         
         Objectif : Vérifier que l'API fonctionne sans token CSRF
         """
-        self.client.login(email='api@example.com', password='testpass123')
+        self.client.login(email='api@example.com', password=TEST_USER_PASSWORD)
         
         # Correction : utiliser django.conf.settings au lieu de self.settings
         from django.conf import settings
@@ -613,7 +614,7 @@ class ViewsErrorHandlingTest(TestCase):
         self.user = User.objects.create_user(
             email='errors@example.com',
             username='error_user',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.client = Client()
 
@@ -623,7 +624,7 @@ class ViewsErrorHandlingTest(TestCase):
         
         Objectif : Vérifier que les URLs inexistantes retournent 404
         """
-        self.client.login(email='errors@example.com', password='testpass123')
+        self.client.login(email='errors@example.com', password=TEST_USER_PASSWORD)
         
         response = self.client.get('/diary/nonexistent-url/')
         self.assertEqual(response.status_code, 404)
@@ -641,7 +642,7 @@ class ViewsErrorHandlingTest(TestCase):
             # Simuler une erreur dans la fonction de stats
             mock_stats.side_effect = Exception("Erreur interne de test")
             
-            self.client.login(email='errors@example.com', password='testpass123')
+            self.client.login(email='errors@example.com', password=TEST_USER_PASSWORD)
             
             # L'exception devrait être capturée par Django en mode test
             # et ne pas planter complètement la vue
@@ -672,7 +673,7 @@ class ViewsErrorHandlingTest(TestCase):
         
         Objectif : Vérifier que les requêtes bizarres ne plantent pas
         """
-        self.client.login(email='errors@example.com', password='testpass123')
+        self.client.login(email='errors@example.com', password=TEST_USER_PASSWORD)
         
         # Requête POST sur une vue GET
         response = self.client.post(reverse('dream_diary'))
@@ -703,7 +704,7 @@ class ViewsSecurityTest(TestCase):
         self.user = User.objects.create_user(
             email='security@example.com',
             username='security_user',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
         self.client = Client()
 
@@ -713,7 +714,7 @@ class ViewsSecurityTest(TestCase):
         
         Objectif : Vérifier que les vues appropriées sont protégées par CSRF
         """
-        self.client.login(email='security@example.com', password='testpass123')
+        self.client.login(email='security@example.com', password=TEST_USER_PASSWORD)
         
         # La vue dream_diary (GET) ne nécessite pas de CSRF
         response = self.client.get(reverse('dream_diary'))
@@ -729,7 +730,7 @@ class ViewsSecurityTest(TestCase):
         
         Objectif : Vérifier que les vues valident les types de contenu
         """
-        self.client.login(email='security@example.com', password='testpass123')
+        self.client.login(email='security@example.com', password=TEST_USER_PASSWORD)
         
         # Test avec content-type bizarre sur l'API
         response = self.client.post(
@@ -747,7 +748,7 @@ class ViewsSecurityTest(TestCase):
         
         Objectif : Vérifier que les uploads sont sécurisés
         """
-        self.client.login(email='security@example.com', password='testpass123')
+        self.client.login(email='security@example.com', password=TEST_USER_PASSWORD)
         
         # Test avec un fichier potentiellement malveillant
         malicious_file = tempfile.NamedTemporaryFile(suffix='.exe')
@@ -770,7 +771,7 @@ class ViewsSecurityTest(TestCase):
         
         Objectif : Vérifier que les headers appropriés sont présents
         """
-        self.client.login(email='security@example.com', password='testpass123')
+        self.client.login(email='security@example.com', password=TEST_USER_PASSWORD)
         
         response = self.client.get(reverse('dream_diary'))
         

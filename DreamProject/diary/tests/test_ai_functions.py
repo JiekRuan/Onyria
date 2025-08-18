@@ -19,6 +19,7 @@ import time
 import tempfile
 import socket
 
+from ..constants import TEST_USER_PASSWORD
 from ..models import Dream
 from ..utils import (
     transcribe_audio, analyze_emotions, interpret_dream, 
@@ -535,7 +536,7 @@ class ImageGenerationTest(TestCase):
         self.user = User.objects.create_user(
             email='test_images@example.com',
             username='test_images',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
 
     @patch('diary.utils.mistral_client')

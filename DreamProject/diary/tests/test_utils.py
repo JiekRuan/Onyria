@@ -16,6 +16,7 @@ import json
 import math
 from collections import Counter
 
+from ..constants import TEST_USER_PASSWORD
 from ..models import Dream
 from ..utils import (
     softmax, classify_dream, get_profil_onirique_stats, 
@@ -219,7 +220,7 @@ class ClassificationFunctionsTest(TestCase):
         self.user = User.objects.create_user(
             email='test_classification@example.com',
             username='test_classification',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
 
     def test_classify_dream_function_positive(self):
@@ -356,7 +357,7 @@ class StatisticsAndProfilingTest(TestCase):
         self.user = User.objects.create_user(
             email='test_stats@example.com',
             username='test_stats',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
 
     def test_get_profil_onirique_stats_no_dreams(self):
