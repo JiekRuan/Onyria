@@ -1,6 +1,7 @@
 name: Tests Hebdomadaires Complets
 
 on:
+  push:
   # Tests hebdomadaires le lundi à 2h UTC
   schedule:
     - cron: "0 2 * * 1"
