@@ -33,7 +33,7 @@ jobs:
     
     - name: Run core tests (< 15 sec)
       run: |
-        python manage.py test diary.tests.test_core --verbosity=1 --parallel --keepdb
-        python manage.py test diary.tests.test_security --verbosity=1 --parallel
+        python DreamProject/manage.py test diary.tests.test_core --verbosity=1 --parallel --keepdb
+        python DreamProject/manage.py test diary.tests.test_security --verbosity=1 --parallel
       env:
         SECRET_KEY: 'test-secret-key-for-ci'
