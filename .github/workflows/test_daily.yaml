@@ -1,0 +1,43 @@
+name: Tests à chaque push
+
+on:
+  push:
+    branches: 116-automatiser-les-tests
+  pull_request:
+    branches: 116-automatiser-les-tests
+
+env:
+  PYTHON_VERSION: '3.11'
+  DJANGO_SETTINGS_MODULE: 'dream_journal.settings.test'
+
+jobs:
+  # Tests critiques ultra-rapides (< 15 secondes)
+  daily_tests:
+    name: "Tests Critiques"
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Set up test database
+      run: |
+        python manage.py migrate --settings=dream_journal.settings.test
+    
+    - name: Run core tests (< 15 sec)
+      run: |
+        python manage.py test diary.tests.test_core --verbosity=1 --parallel --keepdb
+        python manage.py test diary.tests.test_security --verbosity=1 --parallel
+      env:
+        SECRET_KEY: 'test-secret-key-for-ci'
