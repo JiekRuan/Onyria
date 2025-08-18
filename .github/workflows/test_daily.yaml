@@ -142,7 +142,7 @@ jobs:
 
       - name: Generate basic coverage
         run: |
-          coverage run --source='diary' manage.py test diary.tests.test_core diary.tests.test_models diary.tests.test_utils
+          coverage run --source='DreamProject/diary' manage.py test diary.tests.test_core diary.tests.test_models diary.tests.test_utils
           coverage report --show-missing
 
   # Résumé quotidien
