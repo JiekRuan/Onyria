@@ -13,7 +13,7 @@ env:
 jobs:
   # Tests critiques ultra-rapides (< 15 secondes)
   daily_tests:
-    name: "Tests Critiques"
+    name: "Tests des fonctionnalités principales et tests de sécurité"
     runs-on: ubuntu-latest
     
     steps:
@@ -33,7 +33,7 @@ jobs:
     
     - name: Set up test database
       run: |
-        python manage.py migrate --settings=dream_journal.settings.test
+        python manage.py migrate
     
     - name: Run core tests (< 15 sec)
       run: |
