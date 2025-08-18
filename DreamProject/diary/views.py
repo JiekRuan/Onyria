@@ -12,19 +12,18 @@ from .utils import (
     classify_dream,
     interpret_dream,
     generate_image_from_text,
-    get_profil_onirique_stats
+    get_profil_onirique_stats,
 )
 from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
 
 
 def dream_analysis_error():
     """Retourne une réponse JSON d'erreur standardisée"""
-    return JsonResponse({
-        'success': False, 
-        'error': DREAM_ERROR_MESSAGE
-    })
+    return JsonResponse({'success': False, 'error': DREAM_ERROR_MESSAGE})
+
 
 # ----- Vues principales ----- #
+
 
 @login_required
 def dream_diary_view(request):
@@ -32,43 +31,47 @@ def dream_diary_view(request):
     dreams = Dream.objects.filter(user=request.user).order_by('-created_at')
 
     stats = get_profil_onirique_stats(request.user)
-    
+
     # Formatage des labels pour l'affichage
     emotion_dominante = stats.get('emotion_dominante')
     if emotion_dominante:
         stats['emotion_dominante'] = EMOTION_LABELS.get(
-            emotion_dominante, 
-            emotion_dominante.capitalize()
+            emotion_dominante, emotion_dominante.capitalize()
         )
-    
+
     statut_reveuse = stats.get('statut_reveuse')
     if statut_reveuse:
         stats['statut_reveuse'] = DREAM_TYPE_LABELS.get(
-            statut_reveuse, 
-            statut_reveuse.capitalize()
+            statut_reveuse, statut_reveuse.capitalize()
         )
 
-    return render(request, 'diary/dream_diary.html', {
-        'dreams': dreams,
-        **stats  # déstructure les clés du dict `stats` directement dans le contexte
-    })
+    return render(
+        request,
+        'diary/dream_diary.html',
+        {
+            'dreams': dreams,
+            **stats,  # déstructure les clés du dict `stats` directement dans le contexte
+        },
+    )
 
 
 @login_required
 def dream_detail_view(request, dream_id):
     """Affiche les détails d'un rêve spécifique"""
     dream = get_object_or_404(Dream, id=dream_id, user=request.user)
-    
+
     # Formatage des labels pour l'affichage
-    formatted_dominant_emotion = EMOTION_LABELS.get(
-        dream.dominant_emotion, 
-        dream.dominant_emotion.capitalize()
-    )
-    formatted_dream_type = DREAM_TYPE_LABELS.get(
-        dream.dream_type, 
-        dream.dream_type.capitalize()
-    )
-    
+    if dream.dominant_emotion:
+        formatted_dominant_emotion = EMOTION_LABELS.get(
+            dream.dominant_emotion, dream.dominant_emotion.capitalize()
+        )
+        formatted_dream_type = DREAM_TYPE_LABELS.get(
+            dream.dream_type, dream.dream_type.capitalize()
+        )
+    else:
+        formatted_dominant_emotion = "Non analysé"
+        formatted_dream_type = "Non analysé"
+        
     # Parser l'interprétation si c'est une string JSON
     interpretation = dream.interpretation
     if isinstance(interpretation, str):
@@ -76,20 +79,22 @@ def dream_detail_view(request, dream_id):
             interpretation = json.loads(interpretation)
         except json.JSONDecodeError:
             interpretation = {}
-    
+
     context = {
         'dream': dream,
         'formatted_dominant_emotion': formatted_dominant_emotion,
         'formatted_dream_type': formatted_dream_type,
         'interpretation': interpretation,
     }
-    
+
     return render(request, 'diary/dream_detail.html', context)
+
 
 @login_required
 def dream_recorder_view(request):
     """Page d'enregistrement vocal du rêve"""
     return render(request, 'diary/dream_recorder.html')
+
 
 @require_http_methods(["POST"])
 @csrf_exempt
@@ -101,12 +106,17 @@ def transcribe(request):
             audio_data = audio_file.read()
             transcription = transcribe_audio(audio_data)
             if transcription:
-                return JsonResponse({'success': True, 'transcription': transcription})
+                return JsonResponse(
+                    {'success': True, 'transcription': transcription}
+                )
             else:
-                return JsonResponse({'success': False, 'error': 'Échec de la transcription'})
+                return JsonResponse(
+                    {'success': False, 'error': 'Échec de la transcription'}
+                )
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio'})
+
 
 @require_http_methods(["POST"])
 @login_required
@@ -152,26 +162,32 @@ def analyse_from_voice(request):
             generate_image_from_text(request.user, transcription, dream)
 
             # Formatage des labels pour la réponse JSON
-            formatted_dominant_emotion = EMOTION_LABELS.get(dominant_emotion[0], dominant_emotion[0].capitalize())
-            formatted_dream_type = DREAM_TYPE_LABELS.get(dream_type, dream_type.capitalize())
+            formatted_dominant_emotion = EMOTION_LABELS.get(
+                dominant_emotion[0], dominant_emotion[0].capitalize()
+            )
+            formatted_dream_type = DREAM_TYPE_LABELS.get(
+                dream_type, dream_type.capitalize()
+            )
 
-            return JsonResponse({
-                "success": True,
-                "transcription": transcription,
-                "emotions": emotions,
-                "dominant_emotion": [formatted_dominant_emotion],
-                "dream_type": formatted_dream_type,
-                "interpretation": interpretation,
-                "image_path": dream.image.url if dream.image else None,
-            })
+            return JsonResponse(
+                {
+                    "success": True,
+                    "transcription": transcription,
+                    "emotions": emotions,
+                    "dominant_emotion": [formatted_dominant_emotion],
+                    "dream_type": formatted_dream_type,
+                    "interpretation": interpretation,
+                    "image_path": dream.image.url if dream.image else None,
+                }
+            )
 
         except Exception as e:
             return dream_analysis_error()
 
-    return JsonResponse({
-        'success': False, 
-        'error': 'Pas de fichier audio transmis'
-    })
+    return JsonResponse(
+        {'success': False, 'error': 'Pas de fichier audio transmis'}
+    )
+
 
 @login_required
 def dream_followup(request):

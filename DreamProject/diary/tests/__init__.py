@@ -9,6 +9,7 @@ Structure des tests :
 ├── test_utils.py        - Tests des fonctions utilitaires (~15 sec)
 ├── test_ai_functions.py - Tests des intégrations IA + fallback (~25 sec)
 ├── test_integration.py  - Tests d'intégration bout-en-bout (~45 sec)
+├── test_security.py     - Tests de sécurité (~20 sec)
 └── test_views.py        - Tests spécifiques des vues Django (~25 sec)
 
 Couverture totale : ~98% du code
