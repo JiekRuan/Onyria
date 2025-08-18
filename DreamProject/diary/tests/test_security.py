@@ -47,13 +47,13 @@ class SecurityTests(TestCase):
 
         self.client.login(email='security@test.com', password='testpass123')
 
-        # 🚨 PAYLOAD MALVEILLANT SPÉCIFIQUE
+        #  PAYLOAD MALVEILLANT SPÉCIFIQUE
         malicious_content = "<script>alert('XSS Attack!')</script>"
         malicious_identifier = (
             "XSS Attack!"  # Identifiant unique du contenu malveillant
         )
 
-        print(f"🔍 Test XSS avec payload: {malicious_content}")
+        print(f" Test XSS avec payload: {malicious_content}")
 
         # Créer un rêve avec le contenu malveillant
         dream = Dream.objects.create(
