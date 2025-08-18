@@ -50,8 +50,9 @@ jobs:
         run: |
           python DreamProject/manage.py test diary.tests.test_${{ matrix.test-suite }} --verbosity=2 --parallel
         env:
-          SECRET_KEY: "test-secret-key-for-ci"
           DEBUG: "False"
+          GROQ_API_KEY: "test-secret-key-for-ci"
+          MISTRAL_API_KEY: "test-secret-key-for-ci"
 
   # Tests des vues Django
   views-tests:
@@ -78,8 +79,9 @@ jobs:
         run: |
           python DreamProject/manage.py test diary.tests.test_views --verbosity=2 --parallel
         env:
-          SECRET_KEY: "test-secret-key-for-ci"
           DEBUG: "False"
+          GROQ_API_KEY: "test-secret-key-for-ci"
+          MISTRAL_API_KEY: "test-secret-key-for-ci"
 
   # Tests IA (seulement si demandé explicitement ou extended)
   ai-tests:
