@@ -1,10 +1,7 @@
 from django.db import models
 from django.conf import settings
 import json
-
-
-def dream_image_path(instance, filename):
-    return f'dream_images/user_{instance.user.id}/{filename}'
+import base64
 
 
 class Dream(models.Model):
@@ -37,13 +34,12 @@ class Dream(models.Model):
         verbose_name="Type de rêve",
     )
 
-    # Contenu généré
-    image = models.ImageField(
-        upload_to=dream_image_path,
-        null=True,
+    # Contenu généré - SEULEMENT BASE64
+    image_base64 = models.TextField(
         blank=True,
-        verbose_name="Image du rêve",
-        help_text="Image générée à partir du rêve"
+        null=True,
+        verbose_name="Image du rêve (base64)",
+        help_text="Image générée à partir du rêve encodée en base64"
     )
     interpretation_json = models.TextField(
         blank=True,
@@ -105,10 +101,24 @@ class Dream(models.Model):
         else:
             self.interpretation_json = None
 
+    def set_image_from_bytes(self, image_bytes, format='PNG'):
+        """Encode une image en base64 et la stocke"""
+        if image_bytes:
+            base64_string = base64.b64encode(image_bytes).decode('utf-8')
+            mime_type = f"image/{format.lower()}"
+            if format.upper() == 'JPG':
+                mime_type = "image/jpeg"
+            self.image_base64 = f"data:{mime_type};base64,{base64_string}"
+
     @property
     def has_image(self):
         """Vérifie si le rêve a une image"""
-        return bool(self.image)
+        return bool(self.image_base64)
+
+    @property
+    def image_url(self):
+        """Retourne l'URL d'image en base64"""
+        return self.image_base64
 
     @property
     def short_transcription(self):

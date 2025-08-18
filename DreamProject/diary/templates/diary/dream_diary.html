@@ -96,9 +96,9 @@
   {% for dream in dreams %}
     <a href="{% url 'dream_detail' dream.id %}" class="dream-tile hidden w-full aspect-square overflow-hidden rounded-md transition-all duration-300 hover:scale-105 hover:z-10 cursor-pointer relative group">
       <img
-        src="{% if dream.image %}{{ dream.image.url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}"
-        alt="{% if dream.image %}Rêve du {{ dream.created_at|date:'d/m/Y' }}{% else %}Pas d'image{% endif %}"
-        class="w-full h-full object-cover {% if not dream.image %}opacity-50{% endif %}"
+        src="{% if dream.image_url %}{{ dream.image_url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}"
+        alt="{% if dream.image_url %}Rêve du {{ dream.created_at|date:'d/m/Y' }}{% else %}Pas d'image{% endif %}"
+        class="w-full h-full object-cover {% if not dream.image_url %}opacity-50{% endif %}"
       >
       <div class="absolute inset-0 bg-gray-800 bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-end justify-center">
         <span class="text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 mb-2">

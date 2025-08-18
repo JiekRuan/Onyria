@@ -133,8 +133,3 @@ AUTH_USER_MODEL = 'accounts.CustomUser'  # Modèle personnalisé
 LOGIN_REDIRECT_URL = '/diary/record/'
 LOGOUT_REDIRECT_URL = 'login'
 
-
-# Fichiers médias (images, sons, etc.)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
