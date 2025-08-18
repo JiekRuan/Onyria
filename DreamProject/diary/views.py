@@ -1,5 +1,5 @@
 import json
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -28,6 +28,7 @@ def dream_analysis_error():
 
 @login_required
 def dream_diary_view(request):
+    """Journal des rêves"""
     dreams = Dream.objects.filter(user=request.user).order_by('-created_at')
 
     stats = get_profil_onirique_stats(request.user)
@@ -51,6 +52,39 @@ def dream_diary_view(request):
         'dreams': dreams,
         **stats  # déstructure les clés du dict `stats` directement dans le contexte
     })
+
+
+@login_required
+def dream_detail_view(request, dream_id):
+    """Affiche les détails d'un rêve spécifique"""
+    dream = get_object_or_404(Dream, id=dream_id, user=request.user)
+    
+    # Formatage des labels pour l'affichage
+    formatted_dominant_emotion = EMOTION_LABELS.get(
+        dream.dominant_emotion, 
+        dream.dominant_emotion.capitalize()
+    )
+    formatted_dream_type = DREAM_TYPE_LABELS.get(
+        dream.dream_type, 
+        dream.dream_type.capitalize()
+    )
+    
+    # Parser l'interprétation si c'est une string JSON
+    interpretation = dream.interpretation
+    if isinstance(interpretation, str):
+        try:
+            interpretation = json.loads(interpretation)
+        except json.JSONDecodeError:
+            interpretation = {}
+    
+    context = {
+        'dream': dream,
+        'formatted_dominant_emotion': formatted_dominant_emotion,
+        'formatted_dream_type': formatted_dream_type,
+        'interpretation': interpretation,
+    }
+    
+    return render(request, 'diary/dream_detail.html', context)
 
 @login_required
 def dream_recorder_view(request):
