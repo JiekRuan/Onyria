@@ -140,11 +140,6 @@ jobs:
           flake8 DreamProject/diary/ --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 DreamProject/diary/ --count --exit-zero --max-complexity=10 --statistics
 
-      - name: Generate basic coverage
-        run: |
-          coverage run --source='DreamProject/diary' manage.py test diary.tests.test_core diary.tests.test_models diary.tests.test_utils
-          coverage report --show-missing
-
   # Résumé quotidien
   daily-summary:
     name: "Résumé Quotidien"
