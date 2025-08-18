@@ -9,6 +9,7 @@ from .utils import transcribe_audio, softmax, classify_dream
 from django.core.management.base import BaseCommand
 from diary.utils import interpret_dream
 import json
+from .constants import TEST_USER_PASSWORD
 
 User = get_user_model()
 
@@ -24,7 +25,7 @@ class DreamModelTest(TestCase):
         self.user = User.objects.create_user(
             email='test@example.com',
             username='testuser',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
     
     def test_create_dream(self):
@@ -250,7 +251,7 @@ def test_dream_diary_view_with_labels(self):
     )
     
     # Connexion de l'utilisateur
-    self.client.login(email='test@example.com', password='testpass123')
+    self.client.login(email='test@example.com', password=TEST_USER_PASSWORD)
     
     # Appel de la vue
     response = self.client.get(reverse('dream_diary'))
@@ -345,7 +346,7 @@ def test_analyse_from_voice_with_formatted_labels(self):
         mock_generate.return_value = None
         
         # Connexion utilisateur
-        self.client.login(email='test@example.com', password='testpass123')
+        self.client.login(email='test@example.com', password=TEST_USER_PASSWORD)
         
         # Simulation d'un fichier audio
         with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
