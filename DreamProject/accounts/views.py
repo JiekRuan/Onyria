@@ -49,7 +49,32 @@ def login_view(request):
 @login_required
 def account_management_view(request):
     if request.method == 'POST':
-        form = UserUpdateForm(request.POST, request.FILES, instance=request.user)
+        # Vérifier s'il y a un fichier image uploadé
+        if 'profile_picture' in request.FILES:
+            uploaded_file = request.FILES['profile_picture']
+            
+            # Lire les bytes du fichier
+            image_bytes = uploaded_file.read()
+            
+            # Déterminer le format
+            file_extension = uploaded_file.name.split('.')[-1].lower()
+            format_mapping = {
+                'png': 'PNG',
+                'jpg': 'JPEG',
+                'jpeg': 'JPEG',
+                'gif': 'GIF',
+                'bmp': 'BMP'
+            }
+            image_format = format_mapping.get(file_extension, 'PNG')
+            
+            # Stocker en base64
+            request.user.set_profile_picture_from_bytes(image_bytes, format=image_format)
+            request.user.save()
+            
+            return redirect('account_management')
+        
+        # Traitement normal du formulaire pour les autres champs
+        form = UserUpdateForm(request.POST, instance=request.user)
         if form.is_valid():
             form.save()
             return redirect('account_management')

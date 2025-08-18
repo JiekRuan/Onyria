@@ -11,12 +11,12 @@
   <!-- Image de profil avec effet "trou" -->
   <div class="relative w-36 h-36 grey-border">
   <div class="rounded-full overflow-hidden w-full h-full">
-    {% if user.profile_picture %}
-      <img src="{{ user.profile_picture.url }}" alt="Profil"
-           class="w-full h-full object-cover rounded-full" />
+    {% if user.profile_picture_url %}
+      <img src="{{ user.profile_picture_url }}" alt="Profil"
+          class="w-full h-full object-cover rounded-full" />
     {% else %}
       <img src="{% static 'img/profil_placeholder.png' %}" alt="Profil"
-           class="w-full h-full object-cover rounded-full" />
+          class="w-full h-full object-cover rounded-full" />
     {% endif %}
     <div class="absolute inset-0 inset-shadow"></div>
   </div>
