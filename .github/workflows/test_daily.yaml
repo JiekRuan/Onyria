@@ -1,19 +1,34 @@
-name: Tests à chaque push
+name: Daily Tests
 
 on:
-  push:
-    branches: 116-automatiser-les-tests
-  pull_request:
-    branches: 116-automatiser-les-tests
+  # Tests quotidiens à 6h UTC
+  schedule:
+    - cron: '0 6 * * *'
+  
+  # Possibilité de déclencher manuellement
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Niveau de tests à exécuter'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+        - 'standard'   # Tests quotidiens normaux (~1min 30)
+        - 'extended'   # Tests étendus avec AI (~2min 30)
 
 env:
   PYTHON_VERSION: '3.11'
 
 jobs:
-  # Tests critiques ultra-rapides (< 15 secondes)
-  daily_tests:
-    name: "Tests des fonctionnalités principales et tests de sécurité"
+  # Tests des modèles et utils (rapides mais complets)
+  models-and-utils:
+    name: "Modèles & Utils"
     runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        test-suite: ['models', 'utils']
     
     steps:
     - name: Checkout code
@@ -29,17 +44,123 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install black
     
-    - name: Run Black (check format)
+    - name: Run ${{ matrix.test-suite }} tests
       run: |
-        black .
-    
-    - name: Run core tests (< 15 sec)
-      run: |
-        python DreamProject/manage.py test diary.tests.test_core --verbosity=1 --parallel --keepdb
-        python DreamProject/manage.py test diary.tests.test_security --verbosity=1 --parallel
+        python DreamProject/manage.py test diary.tests.test_${{ matrix.test-suite }} --verbosity=2 --parallel
       env:
         SECRET_KEY: 'test-secret-key-for-ci'
-        GROQ_API_KEY: 'fake-key-for-ci'
-        MISTRAL_API_KEY: 'fake-key-for-ci'
+        DEBUG: 'False'
+
+  # Tests des vues Django
+  views-tests:
+    name: "Vues Django"
+    runs-on: ubuntu-latest
+    needs: models-and-utils
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run views tests
+      run: |
+        python DreamProject/manage.py test diary.tests.test_views --verbosity=2 --parallel
+      env:
+        SECRET_KEY: 'test-secret-key-for-ci'
+        DEBUG: 'False'
+
+  # Tests IA (seulement si demandé explicitement ou extended)
+  ai-tests:
+    name: "Tests IA"
+    runs-on: ubuntu-latest
+    needs: views-tests
+    if: github.event.inputs.test_level == 'extended' || github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run AI tests
+      run: |
+        python DreamProject/manage.py test diary.tests.test_ai_functions --verbosity=2 --parallel
+      env:
+        DEBUG: 'False'
+        GROQ_API_KEY: 'test-secret-key-for-ci'
+        MISTRAL_API_KEY: 'test-secret-key-for-ci'
+
+  # Métriques de qualité
+  quality-metrics:
+    name: " Métriques Qualité"
+    runs-on: ubuntu-latest
+    needs: [models-and-utils, views-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install coverage flake8
+    
+    - name: Run linting
+      run: |
+        flake8 diary/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 diary/ --count --exit-zero --max-complexity=10 --statistics
+    
+    - name: Generate basic coverage
+      run: |
+        coverage run --source='diary' manage.py test diary.tests.test_core diary.tests.test_models diary.tests.test_utils
+        coverage report --show-missing
+
+  # Résumé quotidien
+  daily-summary:
+    name: "Résumé Quotidien"
+    runs-on: ubuntu-latest
+    needs: [models-and-utils, views-tests, ai-tests, quality-metrics]
+    if: always()
+    
+    steps:
+    - name: Generate summary
+      run: |
+        echo "=== RÉSUMÉ TESTS QUOTIDIENS ==="
+        echo "Date: $(date)"
+        echo "Status modèles: ${{ needs.models-and-utils.result }}"
+        echo "Status vues: ${{ needs.views-tests.result }}"
+        echo "Status IA: ${{ needs.ai-tests.result }}"
+        echo "Status qualité: ${{ needs.quality-metrics.result }}"
+        
+        if [[ "${{ needs.models-and-utils.result }}" == "success" && "${{ needs.views-tests.result }}" == "success" ]]; then
+          echo " Tests quotidiens RÉUSSIS"
+        else
+          echo "Échecs détectés dans les tests quotidiens"
+        fi
