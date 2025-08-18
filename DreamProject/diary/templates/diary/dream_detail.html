@@ -1,0 +1,76 @@
+{% extends "diary/base.html" %}
+{% load static %}
+
+{% block title %}Détails du rêve{% endblock %}
+
+{% block content %}
+
+<!-- Titre avec date -->
+<h1 class="text-3xl text-center text-black mb-2">Détails de ton rêve</h1>
+<p class="text-center text-gray-600 mb-8 text-sm">
+  Enregistré le {{ dream.created_at|date:"d/m/Y à H:i" }}
+</p>
+
+<!-- Bloc transcription -->
+<div class="mb-6 pastel-yellow">
+  <h2 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Transcription</h2>
+  <div class="text-xs sm:text-sm md:text-base font-normal leading-relaxed">
+    {{ dream.transcription }}
+  </div>
+</div>
+
+<!-- Bloc émotion + type de rêve côte à côte -->
+<div class="mb-6 flex gap-4">
+  <div class="pastel-baby-powder w-1/2">
+    <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Émotion dominante</h3>
+    <div class="text-xs sm:text-sm md:text-base font-normal leading-relaxed">
+      {{ formatted_dominant_emotion }}
+    </div>
+  </div>
+  <div class="pastel-vanilla w-1/2">
+    <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Type de rêve</h3>
+    <div class="text-xs sm:text-sm md:text-base font-normal leading-relaxed">
+      {{ formatted_dream_type }}
+    </div>
+  </div>
+</div>
+
+<!-- Bloc image générée -->
+<div class="mb-6">
+  <div class="flex justify-center">
+    <img src="{% if dream.image %}{{ dream.image.url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}" 
+         alt="{% if dream.image %}Image du rêve{% else %}Pas d'image générée{% endif %}"
+         class="pastel-image w-full aspect-[4/3] object-cover mx-auto {% if not dream.image %}opacity-50{% endif %}">
+  </div>
+</div>
+
+<!-- Bloc interprétation -->
+{% if interpretation %}
+<div class="pastel-champagne mb-6">
+  <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Interprétation</h3>
+  <div class="text-xs sm:text-sm md:text-base font-normal leading-relaxed space-y-4 text-left">
+    {% for key, value in interpretation.items %}
+    <p class="text-left text-xs sm:text-sm md:text-base font-normal mb-4">
+      <strong>{{ key|capfirst }}</strong> : {{ value }}
+    </p>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Avertissement -->
+<div class="mt-3">
+  <details class="ai-disclaimer">
+    <summary class="ai-disclaimer__summary flex items-center gap-2">
+      <img src="{% static 'img/warning.png' %}" class="w-4 h-4 md:w-5 md:h-5 align-middle" aria-hidden="true" alt="">
+      <span class="ai-disclaimer__title">Avertissement aux Onyriens</span>
+    </summary>
+    <div class="ai-disclaimer__content">
+      <p>Les interprétations qui vous sont présentées sont générées par une intelligence artificielle et tirent leurs sources d'origines diverses. Elles visent avant tout à éveiller votre curiosité et à nourrir votre exploration personnelle du monde des rêves.</p>
+      <p class="mt-1">Ces suggestions peuvent comporter des imprécisions ou des approximations : elles ne doivent en aucun cas être considérées comme des conseils médicaux, psychologiques ou thérapeutiques.</p>
+      <p class="mt-1">Si un rêve vous questionne profondément ou suscite une émotion persistante, n'hésitez pas à en parler avec un professionnel qualifié.</p>
+    </div>
+  </details>
+</div>
+
+{% endblock %}
