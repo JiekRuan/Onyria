@@ -1,22 +1,19 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-import uuid
-import os
+import base64
 
-def user_directory_path(instance, filename):
-    ext = filename.split('.')[-1]
-    filename = f"{uuid.uuid4()}.{ext}"
-    return f"profile_pics/user_{instance.id}/{filename}"
 
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
-    profile_picture = models.ImageField(
-        upload_to=user_directory_path,
-        null=True,
+    
+    profile_picture_base64 = models.TextField(
         blank=True,
-        verbose_name="Photo de profil"
+        null=True,
+        verbose_name="Photo de profil (base64)",
+        help_text="Photo de profil encodée en base64"
     )
-    bio = models.CharField(  # ← nouveau champ
+    
+    bio = models.CharField(
         "Bio",
         max_length=180,
         blank=True,
@@ -29,3 +26,22 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def set_profile_picture_from_bytes(self, image_bytes, format='PNG'):
+        """Encode une image de profil en base64 et la stocke"""
+        if image_bytes:
+            base64_string = base64.b64encode(image_bytes).decode('utf-8')
+            mime_type = f"image/{format.lower()}"
+            if format.upper() == 'JPG':
+                mime_type = "image/jpeg"
+            self.profile_picture_base64 = f"data:{mime_type};base64,{base64_string}"
+
+    @property
+    def has_profile_picture(self):
+        """Vérifie si l'utilisateur a une photo de profil"""
+        return bool(self.profile_picture_base64)
+
+    @property
+    def profile_picture_url(self):
+        """Retourne l'URL de la photo de profil en base64"""
+        return self.profile_picture_base64

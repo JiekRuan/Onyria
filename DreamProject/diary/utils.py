@@ -279,7 +279,7 @@ def interpret_dream(text):
 def generate_image_from_text(user, prompt_text, dream_instance):
     """
     Génère une image IA à partir du texte du rêve, via agent Mistral.
-    Attache l'image et le prompt d'entrée au modèle Dream.
+    Stocke l'image en base64 dans le modèle Dream.
     """
     logger.info(f"Génération image pour rêve ID: {dream_instance.id}")
     
@@ -311,13 +311,12 @@ def generate_image_from_text(user, prompt_text, dream_instance):
                 return False
 
             image_bytes = mistral_client.files.download(file_id=file_id).read()
-            filename = f"dream_{dream_instance.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
 
-            dream_instance.image.save(filename, ContentFile(image_bytes))
-            dream_instance.image_prompt = prompt_text
+            # Stocker en base64 au lieu de fichier
+            dream_instance.set_image_from_bytes(image_bytes, format='PNG')
             dream_instance.save()
 
-            logger.info(f"Image sauvegardée: {filename}")
+            logger.info(f"Image stockée en base64 pour rêve {dream_instance.id}")
             return True
 
         except Exception as e:

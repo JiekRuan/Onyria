@@ -584,7 +584,6 @@ class ImageGenerationTest(TestCase):
         # Vérifier que l'image a été sauvegardée
         dream.refresh_from_db()
         self.assertTrue(dream.has_image)
-        self.assertEqual(dream.image_prompt, "Un oiseau bleu volant dans un ciel étoilé")
 
     @patch('diary.utils.mistral_client')
     @patch('diary.utils.read_file')

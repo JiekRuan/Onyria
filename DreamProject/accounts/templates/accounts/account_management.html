@@ -14,8 +14,8 @@
 
   <!-- Photo de profil-->
   <div class="rounded-full overflow-hidden w-full h-full grey-border">
-    {% if user.profile_picture %}
-      <img src="{{ user.profile_picture.url }}" alt="Photo de profil"
+    {% if user.profile_picture_url %}
+      <img src="{{ user.profile_picture_url }}" alt="Photo de profil"
            class="w-full h-full object-cover rounded-full" />
     {% else %}
       <img src="{% static 'img/profil_placeholder.png' %}" alt="Photo par défaut"

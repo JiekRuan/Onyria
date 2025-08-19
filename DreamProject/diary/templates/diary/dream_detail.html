@@ -38,9 +38,9 @@
 <!-- Bloc image générée -->
 <div class="mb-6">
   <div class="flex justify-center">
-    <img src="{% if dream.image %}{{ dream.image.url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}" 
-         alt="{% if dream.image %}Image du rêve{% else %}Pas d'image générée{% endif %}"
-         class="pastel-image w-full aspect-[4/3] object-cover mx-auto {% if not dream.image %}opacity-50{% endif %}">
+    <img src="{% if dream.image_url %}{{ dream.image_url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}" 
+         alt="{% if dream.image_url %}Image du rêve{% else %}Pas d'image générée{% endif %}"
+         class="pastel-image w-full aspect-[4/3] object-cover mx-auto {% if not dream.image_url %}opacity-50{% endif %}">
   </div>
 </div>
 

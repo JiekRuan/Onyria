@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='dream',
             name='image',
-            field=models.ImageField(blank=True, help_text='Image générée à partir du rêve', null=True, upload_to=diary.models.dream_image_path, verbose_name='Image du rêve'),
+            field=models.ImageField(blank=True, help_text='Image générée à partir du rêve', null=True, upload_to='dream_images/', verbose_name='Image du rêve'),
         ),
     ]

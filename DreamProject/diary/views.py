@@ -177,7 +177,7 @@ def analyse_from_voice(request):
                     "dominant_emotion": [formatted_dominant_emotion],
                     "dream_type": formatted_dream_type,
                     "interpretation": interpretation,
-                    "image_path": dream.image.url if dream.image else None,
+                    "image_path": dream.image_url,
                 }
             )
 

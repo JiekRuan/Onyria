@@ -20,9 +20,9 @@ class LoginForm(forms.Form):
 class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ['profile_picture']
+        fields = ['bio']
         labels = {
-            'profile_picture': '', 
+            'bio': '', 
         }
 
 
@@ -47,4 +47,3 @@ class BioForm(forms.ModelForm):
                 "maxlength": 180
             })
         }
-
