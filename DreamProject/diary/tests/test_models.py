@@ -4,7 +4,7 @@ Tests complets pour le modèle Dream et ses fonctionnalités.
 Ce module teste :
 - Création et validation des instances Dream
 - Propriétés JSON (emotions, interpretation)  
-- Gestion des images et uploads
+- Gestion des images base64
 - Méthodes utilitaires du modèle
 - Contraintes et validations
 - Gestion Unicode et cas limites
@@ -13,20 +13,16 @@ Ce module teste :
 
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.files.storage import default_storage
 from django.conf import settings
 from django.db import transaction
-from PIL import Image
-from io import BytesIO
 import json
 import time
-import os
+import base64
 import threading
 import unittest
 from collections import defaultdict
 
-from ..models import Dream, dream_image_path
+from ..models import Dream
 
 User = get_user_model()
 
@@ -236,7 +232,7 @@ class DreamModelTest(TestCase):
 
     def test_has_image_property(self):
         """
-        Test de la propriété has_image.
+        Test de la propriété has_image avec base64.
         
         Objectif : Vérifier la détection de présence d'image
         """
@@ -248,13 +244,8 @@ class DreamModelTest(TestCase):
         # Sans image
         self.assertFalse(dream.has_image)
         
-        # Avec image simulée
-        fake_image = SimpleUploadedFile(
-            "test_dream.jpg",
-            b"fake_image_content",
-            content_type="image/jpeg"
-        )
-        dream.image = fake_image
+        # Avec image base64
+        dream.set_image_from_bytes(b"fake_image_content", format='PNG')
         dream.save()
         
         self.assertTrue(dream.has_image)
@@ -331,23 +322,6 @@ class DreamModelTest(TestCase):
         self.assertIn("Un rêve pour tester la représentation string", str_repr)
         # Vérifier que la date est formatée
         self.assertRegex(str_repr, r'\d{2}/\d{2}/\d{4} \d{2}:\d{2}')
-
-    def test_dream_image_path_function(self):
-        """
-        Test de la fonction dream_image_path.
-        
-        Objectif : Vérifier la génération correcte du chemin d'upload
-        """
-        dream = Dream.objects.create(
-            user=self.user,
-            transcription="Test path image"
-        )
-        
-        filename = "test_dream_image.jpg"
-        path = dream_image_path(dream, filename)
-        
-        expected_path = f'dream_images/user_{self.user.id}/{filename}'
-        self.assertEqual(path, expected_path)
 
     def test_dream_ordering(self):
         """
@@ -638,15 +612,16 @@ class DreamModelTest(TestCase):
         print(f"Débit: {num_dreams/execution_time:.1f} rêves/seconde")
 
 
-class DreamModelImageTest(TestCase):
+class DreamModelImageBase64Test(TestCase):
     """
-    Tests spécifiques pour la gestion des images dans le modèle Dream.
+    Tests spécifiques pour la gestion des images base64 dans le modèle Dream.
     
     Cette classe teste :
-    - Upload et stockage d'images
-    - Validation des formats
-    - Nettoyage des fichiers
-    - Gestion des erreurs d'image
+    - Stockage et récupération base64
+    - Validation des formats d'image
+    - Méthodes de manipulation d'images
+    - Gestion des erreurs et cas limites
+    - Performance avec images volumineuses
     """
     
     def setUp(self):
@@ -656,182 +631,268 @@ class DreamModelImageTest(TestCase):
             password='testpass123'
         )
 
-    def create_test_image(self, format='JPEG', size=(100, 100)):
+    def test_image_base64_storage(self):
         """
-        Utilitaire pour créer une image de test.
+        Test de stockage d'image en base64.
         
-        Args:
-            format: Format de l'image (JPEG, PNG, etc.)
-            size: Taille en pixels (width, height)
-        
-        Returns:
-            SimpleUploadedFile: Fichier image prêt pour l'upload
+        Objectif : Vérifier que les images sont stockées en base64
         """
-        image = Image.new('RGB', size, color='red')
-        image_io = BytesIO()
-        image.save(image_io, format=format)
-        image_io.seek(0)
-        
-        filename = f"test_image.{format.lower()}"
-        content_type = f"image/{format.lower()}"
-        
-        return SimpleUploadedFile(
-            filename,
-            image_io.getvalue(),
-            content_type=content_type
-        )
-
-    def test_image_upload_jpeg(self):
-        """
-        Test d'upload d'une image JPEG valide.
-        
-        Objectif : Vérifier que les images JPEG sont correctement stockées
-        """
-        image_file = self.create_test_image('JPEG')
-        
         dream = Dream.objects.create(
             user=self.user,
-            transcription="Rêve avec image JPEG",
-            image=image_file
+            transcription="Rêve avec image base64"
         )
+        
+        # Sans image
+        self.assertFalse(dream.has_image)
+        self.assertIsNone(dream.image_url)
+        
+        # Avec image base64
+        fake_image_bytes = b"fake_image_binary_data"
+        dream.set_image_from_bytes(fake_image_bytes, format='PNG')
+        dream.save()
         
         # Vérifications
         self.assertTrue(dream.has_image)
-        self.assertIsNotNone(dream.image)
-        self.assertTrue(dream.image.name.startswith(f'dream_images/user_{self.user.id}/'))
-        self.assertTrue(dream.image.name.endswith('.jpeg'))
+        self.assertIsNotNone(dream.image_url)
+        self.assertTrue(dream.image_url.startswith("data:image/png;base64,"))
 
-    def test_image_upload_png(self):
+    def test_image_different_formats(self):
         """
-        Test d'upload d'une image PNG valide.
+        Test de stockage avec différents formats d'image.
         
-        Objectif : Vérifier le support du format PNG
+        Objectif : Vérifier le support de différents formats
         """
-        image_file = self.create_test_image('PNG')
-        
         dream = Dream.objects.create(
             user=self.user,
-            transcription="Rêve avec image PNG",
-            image=image_file
+            transcription="Test formats"
         )
         
+        # Test PNG
+        dream.set_image_from_bytes(b"fake_png", format='PNG')
+        self.assertTrue(dream.image_url.startswith("data:image/png;base64,"))
+        
+        # Test JPEG
+        dream.set_image_from_bytes(b"fake_jpeg", format='JPEG')
+        self.assertTrue(dream.image_url.startswith("data:image/jpeg;base64,"))
+        
+        # Test JPG (doit être converti en jpeg)
+        dream.set_image_from_bytes(b"fake_jpg", format='JPG')
+        self.assertTrue(dream.image_url.startswith("data:image/jpeg;base64,"))
+
+    def test_image_base64_persistence(self):
+        """
+        Test de persistence des images base64.
+        
+        Objectif : Vérifier que les images base64 sont sauvegardées en DB
+        """
+        dream = Dream.objects.create(
+            user=self.user,
+            transcription="Test persistence base64"
+        )
+        
+        fake_image_bytes = b"test_persistence_data"
+        dream.set_image_from_bytes(fake_image_bytes)
+        dream.save()
+        
+        # Recharger depuis la DB
+        dream.refresh_from_db()
+        
+        # Vérifier que l'image est toujours là
         self.assertTrue(dream.has_image)
-        self.assertTrue(dream.image.name.endswith('.png'))
+        self.assertIsNotNone(dream.image_base64)
+        self.assertIsNotNone(dream.image_url)
 
-    def test_image_path_generation(self):
+    def test_image_large_base64(self):
         """
-        Test de génération du chemin d'image.
+        Test de stockage d'images volumineuses en base64.
         
-        Objectif : Vérifier l'isolation des images par utilisateur
+        Objectif : Vérifier que les grosses images sont gérées
         """
-        image_file = self.create_test_image()
-        
         dream = Dream.objects.create(
             user=self.user,
-            transcription="Test chemin image",
-            image=image_file
+            transcription="Test grosse image base64"
         )
         
-        # Vérifier la structure du chemin
-        expected_prefix = f'dream_images/user_{self.user.id}/'
-        self.assertTrue(dream.image.name.startswith(expected_prefix))
-
-    def test_large_image_handling(self):
-        """
-        Test de gestion d'images de grande taille.
+        # Simuler une grosse image (100KB)
+        large_image_bytes = b"large_image_data" * 6000  # ~100KB
         
-        Objectif : Vérifier que les grosses images sont gérées correctement
-        """
-        # Créer une image de 2MB environ
-        large_image = self.create_test_image('JPEG', size=(2000, 2000))
+        dream.set_image_from_bytes(large_image_bytes)
+        dream.save()
         
-        dream = Dream.objects.create(
-            user=self.user,
-            transcription="Rêve avec grosse image",
-            image=large_image
-        )
-        
+        # Vérifications
         self.assertTrue(dream.has_image)
-        # Vérifier que le fichier existe bien
-        self.assertTrue(dream.image.storage.exists(dream.image.name))
+        self.assertIsNotNone(dream.image_url)
+        # Vérifier que la taille base64 est cohérente (~133% de la taille originale)
+        self.assertGreater(len(dream.image_base64), len(large_image_bytes))
 
-    def test_multiple_users_image_isolation(self):
+    def test_image_empty_bytes(self):
         """
-        Test d'isolation des images entre utilisateurs.
+        Test de gestion des bytes vides.
         
-        Objectif : Vérifier que chaque user a son dossier d'images
+        Objectif : Vérifier la gestion des cas limites
         """
-        user2 = User.objects.create_user(
-            email='user2@example.com',
-            username='user2',
-            password='testpass123'
-        )
-        
-        image1 = self.create_test_image()
-        image2 = self.create_test_image()
-        
-        dream1 = Dream.objects.create(
-            user=self.user,
-            transcription="Rêve user 1",
-            image=image1
-        )
-        
-        dream2 = Dream.objects.create(
-            user=user2,
-            transcription="Rêve user 2",
-            image=image2
-        )
-        
-        # Vérifier l'isolation des chemins
-        self.assertTrue(dream1.image.name.startswith(f'dream_images/user_{self.user.id}/'))
-        self.assertTrue(dream2.image.name.startswith(f'dream_images/user_{user2.id}/'))
-        self.assertNotEqual(
-            dream1.image.name.split('/')[1],  # user_X partie
-            dream2.image.name.split('/')[1]
-        )
-
-    def test_image_without_extension(self):
-        """
-        Test d'upload d'image sans extension.
-        
-        Objectif : Vérifier la gestion des fichiers malformés
-        """
-        fake_image = SimpleUploadedFile(
-            "image_sans_extension",
-            b"fake_image_content",
-            content_type="image/jpeg"
-        )
-        
         dream = Dream.objects.create(
             user=self.user,
-            transcription="Test image sans extension",
-            image=fake_image
+            transcription="Test bytes vides"
         )
         
-        # Doit être géré gracieusement
+        # Bytes vides
+        dream.set_image_from_bytes(b"")
+        self.assertFalse(dream.has_image)
+        
+        # None
+        dream.set_image_from_bytes(None)
+        self.assertFalse(dream.has_image)
+
+    def test_image_base64_encoding_accuracy(self):
+        """
+        Test de précision de l'encodage base64.
+        
+        Objectif : Vérifier que l'encodage/décodage est fidèle
+        """
+        dream = Dream.objects.create(
+            user=self.user,
+            transcription="Test précision encodage"
+        )
+        
+        # Données d'image test
+        original_bytes = b"test_image_data_with_special_chars_\x00\x01\x02\xff"
+        
+        # Encoder
+        dream.set_image_from_bytes(original_bytes, format='PNG')
+        
+        # Vérifier que le base64 est correct
+        base64_part = dream.image_base64.split(',')[1]  # Retirer le préfixe data:
+        decoded_bytes = base64.b64decode(base64_part)
+        
+        self.assertEqual(decoded_bytes, original_bytes)
+
+    def test_image_base64_mime_types(self):
+        """
+        Test des types MIME pour différents formats.
+        
+        Objectif : Vérifier que les types MIME sont corrects
+        """
+        dream = Dream.objects.create(
+            user=self.user,
+            transcription="Test types MIME"
+        )
+        
+        test_cases = [
+            ('PNG', 'data:image/png;base64,'),
+            ('JPEG', 'data:image/jpeg;base64,'),
+            ('JPG', 'data:image/jpeg;base64,'),  # JPG doit devenir jpeg
+            ('GIF', 'data:image/gif;base64,'),
+            ('BMP', 'data:image/bmp;base64,'),
+        ]
+        
+        for format_name, expected_prefix in test_cases:
+            with self.subTest(format=format_name):
+                dream.set_image_from_bytes(b"test_data", format=format_name)
+                self.assertTrue(dream.image_url.startswith(expected_prefix))
+
+    def test_image_base64_with_special_characters(self):
+        """
+        Test d'images contenant des caractères spéciaux.
+        
+        Objectif : Vérifier la robustesse de l'encodage base64
+        """
+        dream = Dream.objects.create(
+            user=self.user,
+            transcription="Test caractères spéciaux"
+        )
+        
+        # Bytes avec tous types de caractères spéciaux
+        special_bytes = bytes(range(256))  # Tous les bytes possibles 0-255
+        
+        dream.set_image_from_bytes(special_bytes, format='PNG')
+        dream.save()
+        
+        # Vérifications
+        self.assertTrue(dream.has_image)
+        self.assertIsNotNone(dream.image_url)
+        
+        # Vérifier que l'encodage fonctionne
+        base64_part = dream.image_base64.split(',')[1]
+        decoded = base64.b64decode(base64_part)
+        self.assertEqual(decoded, special_bytes)
+
+    def test_image_base64_performance_encoding(self):
+        """
+        Test de performance de l'encodage base64.
+        
+        Objectif : Vérifier que l'encodage reste rapide même pour de gros fichiers
+        """
+        dream = Dream.objects.create(
+            user=self.user,
+            transcription="Test performance encodage"
+        )
+        
+        # Image de 500KB
+        large_bytes = b"performance_test_data" * 25000  # ~500KB
+        
+        start_time = time.time()
+        dream.set_image_from_bytes(large_bytes, format='JPEG')
+        dream.save()
+        end_time = time.time()
+        
+        # L'encodage doit rester sous 1 seconde
+        encoding_time = end_time - start_time
+        self.assertLess(encoding_time, 1.0, 
+                       f"Encodage trop lent: {encoding_time:.2f}s pour 500KB")
+        
+        # Vérifier que l'image est bien stockée
         self.assertTrue(dream.has_image)
 
-    def test_empty_image_file(self):
+    def test_image_url_property_consistency(self):
         """
-        Test d'upload d'un fichier image vide.
+        Test de cohérence de la propriété image_url.
         
-        Objectif : Vérifier la gestion des fichiers vides
+        Objectif : Vérifier que image_url retourne toujours le bon format
         """
-        empty_image = SimpleUploadedFile(
-            "empty.jpg",
-            b"",  # Fichier vide
-            content_type="image/jpeg"
-        )
-        
         dream = Dream.objects.create(
             user=self.user,
-            transcription="Test image vide",
-            image=empty_image
+            transcription="Test cohérence image_url"
         )
         
-        # Peut être accepté selon la configuration Django
-        # Le test vérifie que ça ne plante pas
-        self.assertIsNotNone(dream.image)
+        # Sans image
+        self.assertIsNone(dream.image_url)
+        
+        # Avec image
+        dream.set_image_from_bytes(b"test_consistency", format='PNG')
+        
+        # image_url doit retourner le base64 complet
+        self.assertEqual(dream.image_url, dream.image_base64)
+        self.assertTrue(dream.image_url.startswith("data:image/png;base64,"))
+
+    def test_image_multiple_updates(self):
+        """
+        Test de mises à jour multiples d'images.
+        
+        Objectif : Vérifier qu'on peut changer l'image plusieurs fois
+        """
+        dream = Dream.objects.create(
+            user=self.user,
+            transcription="Test mises à jour multiples"
+        )
+        
+        # Première image
+        dream.set_image_from_bytes(b"first_image", format='PNG')
+        first_url = dream.image_url
+        self.assertTrue(first_url.startswith("data:image/png;base64,"))
+        
+        # Deuxième image (remplace la première)
+        dream.set_image_from_bytes(b"second_image", format='JPEG')
+        second_url = dream.image_url
+        self.assertTrue(second_url.startswith("data:image/jpeg;base64,"))
+        
+        # Les URLs doivent être différentes
+        self.assertNotEqual(first_url, second_url)
+        
+        # Sauvegarder et vérifier
+        dream.save()
+        dream.refresh_from_db()
+        self.assertEqual(dream.image_url, second_url)
 
 
 class DreamModelPerformanceTest(TestCase):
@@ -950,6 +1011,98 @@ class DreamModelPerformanceTest(TestCase):
         self.assertEqual(analyzed_dreams, 200)
         self.assertEqual(len(recent_dreams), 10)
 
+    def test_base64_images_performance_impact(self):
+        """
+        Test de l'impact des images base64 sur les performances.
+        
+        Objectif : Vérifier que les images base64 n'impactent pas trop les requêtes
+        """
+        # Créer des rêves avec et sans images
+        dreams_with_images = []
+        dreams_without_images = []
+        
+        # 50 rêves avec images base64
+        for i in range(50):
+            dream = Dream.objects.create(
+                user=self.user,
+                transcription=f"Rêve avec image {i}"
+            )
+            # Ajouter une image base64 de taille moyenne (50KB)
+            image_data = b"image_data_for_performance_test" * 1500  # ~50KB
+            dream.set_image_from_bytes(image_data, format='JPEG')
+            dream.save()
+            dreams_with_images.append(dream)
+        
+        # 50 rêves sans images
+        for i in range(50):
+            dream = Dream.objects.create(
+                user=self.user,
+                transcription=f"Rêve sans image {i}"
+            )
+            dreams_without_images.append(dream)
+        
+        # Test de performance des requêtes
+        start_time = time.time()
+        
+        # Requêtes courantes
+        all_dreams = list(Dream.objects.filter(user=self.user))
+        dreams_with_images_query = [d for d in all_dreams if d.has_image]
+        dreams_without_images_query = [d for d in all_dreams if not d.has_image]
+        
+        end_time = time.time()
+        execution_time = end_time - start_time
+        
+        # Vérifications
+        self.assertEqual(len(dreams_with_images_query), 50)
+        self.assertEqual(len(dreams_without_images_query), 50)
+        
+        # Les requêtes doivent rester acceptables même avec base64
+        self.assertLess(execution_time, 3.0, 
+                       f"Requêtes trop lentes avec images base64: {execution_time:.2f}s")
+        
+        print(f"\n=== Performance avec images base64 ===")
+        print(f"Rêves avec images: {len(dreams_with_images_query)}")
+        print(f"Rêves sans images: {len(dreams_without_images_query)}")
+        print(f"Temps requêtes: {execution_time:.2f}s")
+
+    def test_large_base64_storage_performance(self):
+        """
+        Test de performance du stockage de grosses images base64.
+        
+        Objectif : Mesurer l'impact des grosses images sur la DB
+        """
+        dream = Dream.objects.create(
+            user=self.user,
+            transcription="Test grosse image performance"
+        )
+        
+        # Image de 1MB
+        large_image = b"very_large_image_data_for_testing" * 30000  # ~1MB
+        
+        # Test d'écriture
+        start_time = time.time()
+        dream.set_image_from_bytes(large_image, format='PNG')
+        dream.save()
+        write_time = time.time() - start_time
+        
+        # Test de lecture
+        start_time = time.time()
+        dream.refresh_from_db()
+        image_url = dream.image_url
+        read_time = time.time() - start_time
+        
+        # Vérifications de performance
+        self.assertLess(write_time, 2.0, f"Écriture trop lente: {write_time:.2f}s")
+        self.assertLess(read_time, 1.0, f"Lecture trop lente: {read_time:.2f}s")
+        
+        # Vérifier que l'image est bien stockée
+        self.assertTrue(dream.has_image)
+        self.assertIsNotNone(image_url)
+        
+        print(f"\n=== Performance grosse image (1MB) ===")
+        print(f"Écriture: {write_time:.2f}s")
+        print(f"Lecture: {read_time:.2f}s")
+
 
 """
 === UTILISATION DES TESTS MODELS ===
@@ -961,39 +1114,61 @@ Ce module teste complètement le modèle Dream et ses fonctionnalités :
 
 2. TESTS PAR CLASSE :
    python manage.py test diary.tests.test_models.DreamModelTest
-   python manage.py test diary.tests.test_models.DreamModelImageTest
+   python manage.py test diary.tests.test_models.DreamModelImageBase64Test
    python manage.py test diary.tests.test_models.DreamModelPerformanceTest
 
 3. COUVERTURE COMPLÈTE DU MODÈLE :
    - Création et validation ✓
    - Propriétés JSON (emotions, interpretation) ✓
-   - Gestion des images ✓
+   - Gestion des images base64 ✓
    - Méthodes utilitaires ✓
    - Performance avec gros volumes ✓
    - Concurrence (PostgreSQL) ✓
    - Robustesse (corruption, Unicode) ✓
 
-4. TESTS DE CONCURRENCE :
+4. NOUVEAUX TESTS BASE64 :
+   - Stockage et récupération base64 ✓
+   - Différents formats d'image ✓
+   - Persistence en base de données ✓
+   - Performance avec grosses images ✓
+   - Gestion des cas limites ✓
+   - Précision de l'encodage ✓
+   - Types MIME corrects ✓
+   - Impact sur les performances ✓
+
+5. TESTS DE CONCURRENCE :
    - test_concurrent_dream_creation : Skippé sur SQLite, activé sur PostgreSQL
    - test_concurrent_dream_creation_fallback_sqlite : Version SQLite séquentielle
    
-5. GESTION AUTOMATIQUE DE LA DB :
+6. GESTION AUTOMATIQUE DE LA DB :
    - SQLite (dev) : Tests séquentiels, pas de problèmes de verrous
    - PostgreSQL (prod) : Tests de concurrence réels automatiquement activés
 
-6. PERFORMANCE VALIDÉE :
+7. PERFORMANCE VALIDÉE :
    - Création en masse : < 1 seconde pour 100 rêves
    - Opérations JSON volumineuses : < 2 secondes
    - Requêtes avec 200 rêves : < 1 seconde
+   - Images base64 1MB : < 2s écriture, < 1s lecture
+   - Requêtes avec 50 images base64 : < 3 secondes
 
 === PHILOSOPHIE ===
 
 Ces tests garantissent que le modèle Dream est robuste :
 - Toutes les propriétés fonctionnent correctement
 - Les données JSON sont bien gérées
-- Les images sont stockées proprement
+- Les images base64 sont stockées efficacement
 - La performance reste acceptable à grande échelle
 - La concurrence est testée quand techniquement possible
+
+=== SPÉCIFICITÉS BASE64 ===
+
+Les nouveaux tests vérifient :
+- Encodage/décodage fidèle des images
+- Support de tous les formats (PNG, JPEG, GIF, BMP)
+- Gestion des caractères spéciaux en binaire
+- Performance acceptable même avec grosses images
+- Persistence correcte en base de données
+- Cohérence des propriétés has_image et image_url
 
 === TRANSITION POSTGRESQL ===
 
@@ -1003,5 +1178,5 @@ Quand vous déployez avec PostgreSQL :
 3. Détection automatique des vrais problèmes de concurrence
 4. Mesure de performance sous charge réelle
 
-Temps d'exécution estimé : 30-60 secondes selon la machine.
+Temps d'exécution estimé : 45-90 secondes selon la machine.
 """
