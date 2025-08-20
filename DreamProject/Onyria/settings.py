@@ -15,6 +15,11 @@ from pathlib import Path
 
 import dj_database_url
 
+_raw = os.getenv("GROQ_API_KEY") or ""
+_clean = _raw.replace("\r", "").replace("\n", "").strip()
+if _raw != _clean:
+    os.environ["GROQ_API_KEY"] = _clean
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

@@ -1,4 +1,5 @@
 import json
+from venv import logger
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -123,6 +124,7 @@ def transcribe(request):
 @login_required
 @csrf_exempt  # retire si tu utilises déjà un token CSRF côté front
 def analyse_from_voice(request):
+    logger.warning("analyse_from_voice: NEW VIEW ACTIVE")
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method_not_allowed"}, status=405)
 
@@ -132,7 +134,7 @@ def analyse_from_voice(request):
         return JsonResponse({"ok": False, "error": "no_audio"}, status=400)
 
     # 2) Clé Groq propre (pas de \n)
-    api_key = (os.getenv("GROQ_API_KEY") or "").strip()
+    api_key = (os.getenv("GROQ_API_KEY") or "").replace("\r","").replace("\n","").strip()
     if not api_key or "\n" in api_key or "\r" in api_key:
         return JsonResponse({"ok": False, "error": "invalid_api_key"}, status=500)
 
