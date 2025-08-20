@@ -3,7 +3,7 @@ import json
 import math
 import tempfile
 import logging
-import time  #nouveau: backoff
+import time  # nouveau: backoff
 from datetime import datetime
 from django.core.files.base import ContentFile
 from dotenv import load_dotenv
@@ -12,6 +12,7 @@ from groq import Groq
 from mistralai import Mistral
 from collections import Counter
 from .models import Dream
+import httpx  # nouveau: fallback HTTP direct
 
 # Configuration du logging professionnel
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ DEFAULT_TEMPERATURE = 0.0
 MAX_FALLBACK_RETRIES = 3
 IMAGE_GENERATION_MODEL = "mistral-medium-2505"
 
-# ouveau: paramètres de retry pour la transcription
+# nouveau: paramètres de retry pour la transcription
 TRANSCRIBE_MAX_RETRIES = 3
 TRANSCRIBE_BACKOFF_BASE = 1.5  # secondes (exponentiel: 1.5, 2.25, 3.38...)
 
@@ -34,7 +35,10 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 
 # Clients externes
-groq_client = Groq(api_key=GROQ_API_KEY)
+groq_client = Groq(
+    api_key=GROQ_API_KEY,
+    http_client=httpx.Client(http2=False, timeout=30)  # HTTP/1.1 + timeout ↑
+)
 mistral_client = Mistral(api_key=MISTRAL_API_KEY)
 
 # ---------- UTILS ----------
@@ -105,11 +109,53 @@ def _is_retryable_transcription_error(err: Exception) -> bool:
     ]
     return any(k in msg for k in keywords)
 
+def _transcribe_via_httpx(file_path: str, language: str = "fr") -> str | None:
+    """
+    nouveau: Fallback direct sur l'API Groq (OpenAI-compatible) en HTTP/1.1 via httpx.
+    Désactive HTTP/2 pour éviter certains soucis de handshake/proxy.
+    """
+    if not GROQ_API_KEY:
+        logger.error("HTTPX fallback: GROQ_API_KEY manquante")
+        return None
+
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+
+    # Multipart form-data — liste de tuples pour gérer les champs répétés
+    data = [
+        ("model", WHISPER_MODEL),
+        ("prompt", "Specify context or spelling"),
+        ("response_format", "json"),
+        ("language", language),
+        ("temperature", str(DEFAULT_TEMPERATURE)),
+        ("timestamp_granularities[]", "word"),
+        ("timestamp_granularities[]", "segment"),
+    ]
+
+    try:
+        with open(file_path, "rb") as f:
+            files = {"file": ("audio.wav", f, "audio/wav")}
+            timeout = httpx.Timeout(connect=15.0, read=180.0, write=60.0, pool=60.0)
+            limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
+            with httpx.Client(http2=False, timeout=timeout, limits=limits, trust_env=True) as client:
+                r = client.post(url, headers=headers, data=data, files=files)
+                r.raise_for_status()
+                payload = r.json()
+                text = payload.get("text")
+                if text:
+                    logger.info(f"HTTPX fallback OK - {len(text)} caractères")
+                    return text
+                logger.error(f"HTTPX fallback: réponse inattendue {payload}")
+                return None
+    except Exception as e:
+        logger.error(f"HTTPX fallback échec: {e}")
+        return None
+
 def transcribe_audio(audio_data, language="fr"):
     """Transcrit un audio en texte avec Whisper de Groq"""
     logger.info(f"Début transcription audio - Langue: {language}")
 
-    # nouveau: garde-fou si la clé est absente/mal configurée en préprod
+    # garde-fou si la clé est absente/mal configurée en préprod
     if not GROQ_API_KEY:
         logger.error("Échec transcription audio: GROQ_API_KEY manquante")
         return None
@@ -141,17 +187,20 @@ def transcribe_audio(audio_data, language="fr"):
 
             except Exception as e:
                 last_error = e
-                # nouveau: retry seulement si c'est une erreur réseau/temporaire
                 if _is_retryable_transcription_error(e) and attempt < TRANSCRIBE_MAX_RETRIES:
                     sleep_s = round(TRANSCRIBE_BACKOFF_BASE ** attempt, 2)
                     logger.warning(f"Transcription erreur réseau (retry dans {sleep_s}s): {e}")
                     time.sleep(sleep_s)
                     continue
                 else:
-                    logger.error(f"Échec transcription audio: {e}")
+                    # ← ICI : remplace l’ancien logger.error(...)
+                    logger.error("Transcription error (%s): %s", type(e).__name__, e)
                     break
 
-        return None
+
+        # nouveau: dernier recours via HTTPX (HTTP/1.1)
+        logger.info("Tentative fallback HTTPX pour la transcription…")
+        return _transcribe_via_httpx(temp_file_path, language)
 
     finally:
         # Nettoyage du fichier temporaire même en cas d'erreur
@@ -166,14 +215,6 @@ def transcribe_audio(audio_data, language="fr"):
 def safe_mistral_call(model, messages, operation="API call"):
     """
     Appel Mistral sécurisé avec système de fallback automatique
-    
-    Args:
-        model: Modèle principal à utiliser
-        messages: Messages pour l'API
-        operation: Description de l'opération (pour les logs)
-    
-    Returns:
-        Response de l'API ou None si tous les fallbacks échouent
     """
     logger.info(f"[{operation}] Démarrage avec modèle: {model}")
     
@@ -190,37 +231,28 @@ def safe_mistral_call(model, messages, operation="API call"):
     for attempt, current_model in enumerate(models_to_try):
         try:
             logger.info(f"[{operation}] Tentative {attempt + 1}: {current_model}")
-            
             response = mistral_client.chat.complete(
                 model=current_model,
                 messages=messages,
                 response_format={"type": "json_object"},
             )
-            
             if attempt > 0:
                 logger.warning(f"[{operation}] Fallback réussi avec {current_model}")
-            
             return response
-            
         except Exception as e:
             error_msg = str(e).lower()
-            
-            # Erreurs qui nécessitent un fallback
             if any(keyword in error_msg for keyword in [
                 "insufficient_quota", "quota_exceeded", "rate_limit", 
                 "model_not_found", "service_unavailable", "timeout"
             ]):
                 logger.warning(f"[{operation}] Erreur {current_model}: {e}")
-                
                 if attempt == len(models_to_try) - 1:
                     logger.error(f"[{operation}] Tous les fallbacks échoués")
                     return None
-                    
                 continue
             else:
                 logger.error(f"[{operation}] Erreur critique {current_model}: {e}")
                 raise e
-    
     return None
 
 # ---------- ANALYSE D'ÉMOTIONS ----------
