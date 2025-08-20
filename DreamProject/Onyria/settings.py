@@ -28,7 +28,13 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG","False").lower() == "true"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS").split(" ")
+# Parse ALLOWED_HOSTS from env allowing commas and/or spaces, without schemes
+_hosts_raw = os.environ.get("ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in _hosts_raw.replace("https://", "").replace("http://", "").replace(",", " ").split()
+    if h.strip()
+]
 
 # Application definition
 
@@ -137,4 +143,3 @@ AUTH_USER_MODEL = 'accounts.CustomUser'  # Modèle personnalisé
 
 LOGIN_REDIRECT_URL = '/diary/record/'
 LOGOUT_REDIRECT_URL = 'login'
-
