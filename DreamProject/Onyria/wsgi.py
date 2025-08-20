@@ -10,6 +10,8 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
 import os
 
 from django.core.wsgi import get_wsgi_application
+_raw = os.getenv("GROQ_API_KEY") or ""
+os.environ["GROQ_API_KEY"] = _raw.replace("\r", "").replace("\n", "").strip()
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Onyria.settings')
 

@@ -126,45 +126,49 @@ def transcribe(request):
 @csrf_exempt  # retire si tu utilises déjà un token CSRF côté front
 def analyse_from_voice(request):
     logger.warning("analyse_from_voice: NEW VIEW ACTIVE")
+
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method_not_allowed"}, status=405)
 
-    # 1) Récup audio envoyé par le front : FormData.append("audio", file, "record.webm")
     audio = request.FILES.get("audio")
     if not audio:
         return JsonResponse({"ok": False, "error": "no_audio"}, status=400)
 
-    # 2) Clé Groq propre (pas de \n)
     api_key = (os.getenv("GROQ_API_KEY") or "").replace("\r","").replace("\n","").strip()
-    if not api_key or "\n" in api_key or "\r" in api_key:
-        return JsonResponse({"ok": False, "error": "invalid_api_key"}, status=500)
+    if not api_key:
+        logger.error("GROQ_API_KEY manquante")
+        return JsonResponse({"ok": False, "error": "no_api_key"}, status=500)
 
-    # 3) Appel Groq (OpenAI-compatible)
     url = "https://api.groq.com/openai/v1/audio/transcriptions"
     headers = {"Authorization": f"Bearer {api_key}"}
-    data = {"model": "whisper-large-v3"}  # adapte si besoin
-    files = {
-        "file": (audio.name, audio.read(), audio.content_type or "audio/webm")
-    }
+    data = {"model": "whisper-large-v3"}
+    files = {"file": (audio.name, audio.read(), audio.content_type or "audio/webm")}
 
     try:
-        with httpx.Client(timeout=30.0) as client:
+        logger.info("Calling Groq transcription: %s", url)
+        with httpx.Client(timeout=60.0) as client:
             resp = client.post(url, headers=headers, data=data, files=files)
             resp.raise_for_status()
         text = resp.json().get("text", "")
         return JsonResponse({"ok": True, "text": text}, status=200)
 
     except httpx.HTTPStatusError as e:
-        # Remonte l’erreur Groq (utile en debug)
+        # On logge TOUT pour savoir
+        body = e.response.text[:1000] if e.response is not None else ""
+        logger.error("Groq HTTPStatusError %s: %s", e.response.status_code if e.response else "?", body)
         return JsonResponse({
             "ok": False,
             "error": "groq_http_error",
-            "status": e.response.status_code,
-            "detail": e.response.text[:500]
+            "status": e.response.status_code if e.response else None,
+            "detail": body
         }, status=502)
-    except httpx.HTTPError:
+
+    except httpx.HTTPError as e:
+        logger.exception("Groq HTTPError (réseau/timeout/SSL)")
         return JsonResponse({"ok": False, "error": "transcription_failed"}, status=502)
+
     except Exception:
+        logger.exception("Unexpected server error")
         return JsonResponse({"ok": False, "error": "server_error"}, status=500)
 
 
