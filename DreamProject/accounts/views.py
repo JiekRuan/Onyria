@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.decorators.cache import never_cache
-from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm, UserUpdateForm, BioForm
+from .forms import RegisterForm, LoginForm, CustomPasswordChangeForm, BioForm
 
 
 @require_http_methods(["GET", "POST"])
@@ -48,40 +48,30 @@ def login_view(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 def account_management_view(request):
-    if request.method == 'POST':
-        # Vérifier s'il y a un fichier image uploadé
-        if 'profile_picture' in request.FILES:
-            uploaded_file = request.FILES['profile_picture']
-            
-            # Lire les bytes du fichier
-            image_bytes = uploaded_file.read()
-            
-            # Déterminer le format
-            file_extension = uploaded_file.name.split('.')[-1].lower()
-            format_mapping = {
-                'png': 'PNG',
-                'jpg': 'JPEG',
-                'jpeg': 'JPEG',
-                'gif': 'GIF',
-                'bmp': 'BMP'
-            }
-            image_format = format_mapping.get(file_extension, 'PNG')
-            
-            # Stocker en base64
-            request.user.set_profile_picture_from_bytes(image_bytes, format=image_format)
-            request.user.save()
-            
-            return redirect('account_management')
+    if request.method == 'POST' and 'profile_picture' in request.FILES:
+        uploaded_file = request.FILES['profile_picture']
         
-        # Traitement normal du formulaire pour les autres champs
-        form = UserUpdateForm(request.POST, instance=request.user)
-        if form.is_valid():
-            form.save()
-            return redirect('account_management')
-    else:
-        form = UserUpdateForm(instance=request.user)
+        # Lire les bytes du fichier
+        image_bytes = uploaded_file.read()
+        
+        # Déterminer le format
+        file_extension = uploaded_file.name.split('.')[-1].lower()
+        format_mapping = {
+            'png': 'PNG',
+            'jpg': 'JPEG',
+            'jpeg': 'JPEG',
+            'gif': 'GIF',
+            'bmp': 'BMP'
+        }
+        image_format = format_mapping.get(file_extension, 'PNG')
+        
+        # Stocker en base64
+        request.user.set_profile_picture_from_bytes(image_bytes, format=image_format)
+        request.user.save()
+        
+        return redirect('account_management')
 
-    return render(request, 'accounts/account_management.html', {'form': form, 'user': request.user})
+    return render(request, 'accounts/account_management.html', {'user': request.user})
 
 @require_POST
 @login_required
