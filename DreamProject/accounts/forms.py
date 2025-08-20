@@ -53,16 +53,7 @@ class LoginForm(forms.Form):
         label="Mot de passe", 
         widget=forms.PasswordInput(attrs={'placeholder': 'Écrivez votre mot de passe'})
     )
-
-class UserUpdateForm(forms.ModelForm):
-    class Meta:
-        model = CustomUser
-        fields = ['bio']
-        labels = {
-            'bio': '', 
-        }
-
-
+    
 class CustomPasswordChangeForm(PasswordChangeForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
