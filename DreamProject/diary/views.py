@@ -2,7 +2,7 @@ import json
 import os
 from venv import logger
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
@@ -124,28 +124,30 @@ def transcribe(request):
 @require_http_methods(["POST"])
 @login_required
 @csrf_exempt  # retire si tu utilises déjà un token CSRF côté front
-def analyse_from_voice(request):
-   def analyse_from_voice(request):
+def analyse_from_voice(request: HttpRequest):
     logger.warning("analyse_from_voice: NEW VIEW ACTIVE")
 
+    # 1) Méthode
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "method_not_allowed"}, status=405)
 
+    # 2) Fichier audio
     audio = request.FILES.get("audio")
     if not audio:
         return JsonResponse({"ok": False, "error": "no_audio"}, status=400)
 
-    # Clé Groq nettoyée
-    api_key = (os.getenv("GROQ_API_KEY") or "").replace("\r","").replace("\n","").strip()
+    # 3) Clé Groq nettoyée
+    api_key = (os.getenv("GROQ_API_KEY") or "").replace("\r", "").replace("\n", "").strip()
     if not api_key:
         logger.error("GROQ_API_KEY manquante ou invalide")
         return JsonResponse({"ok": False, "error": "no_api_key"}, status=500)
 
+    # 4) URL/Headers/Data Groq
     url = "https://api.groq.com/openai/v1/audio/transcriptions"
     headers = {"Authorization": f"Bearer {api_key}"}
     data = {"model": "whisper-large-v3"}
 
-    # ====== PATCH MIME/EXT (c'est ICI la modif importante) ======
+    # 5) PATCH nom/MIME/extension acceptés par Groq
     orig_name = (audio.name or "audio")
     orig_ctype = (audio.content_type or "").split(";", 1)[0].strip().lower()
 
@@ -155,7 +157,7 @@ def analyse_from_voice(request):
         "audio/mp3": ".mp3",
         "audio/mpga": ".mp3",
         "audio/mp4": ".m4a",    # m4a
-        "video/mp4": ".mp4",    # toléré si Safari donne video/mp4
+        "video/mp4": ".mp4",    # quelques navigateurs
         "audio/ogg": ".ogg",
         "audio/opus": ".opus",
         "audio/wav": ".wav",
@@ -173,41 +175,40 @@ def analyse_from_voice(request):
                 break
 
     if not mime:
-        # Fallback standard avec MediaRecorder
-        mime, ext = "audio/webm", ".webm"
+        mime, ext = "audio/webm", ".webm"  # fallback sûr
 
     safe_name = orig_name if orig_name.lower().endswith(ext) else f"record{ext}"
     file_bytes = audio.read()
-
     files = {"file": (safe_name, file_bytes, mime)}
-    logger.info("Envoi Groq: name=%s, mime=%s, size=%s", safe_name, mime, len(file_bytes))
-    # ====== FIN PATCH ======
 
+    logger.info("Envoi Groq: name=%s, mime=%s, size=%s", safe_name, mime, len(file_bytes))
+
+    # 6) Appel Groq avec gestion d'erreurs QUI RETOURNENT TOUJOURS UNE RÉPONSE
     try:
         with httpx.Client(timeout=60.0) as client:
             resp = client.post(url, headers=headers, data=data, files=files)
             resp.raise_for_status()
-        text = resp.json().get("text", "")
-        return JsonResponse({"ok": True, "text": text}, status=200)
-
     except httpx.HTTPStatusError as e:
         body = e.response.text[:1000] if e.response is not None else ""
-        logger.error("Groq HTTPStatusError %s: %s",
-                     e.response.status_code if e.response else "?", body)
-        return JsonResponse({
-            "ok": False,
-            "error": "groq_http_error",
-            "status": e.response.status_code if e.response else None,
-            "detail": body
-        }, status=502)
-
-    except httpx.HTTPError:
+        code = e.response.status_code if e.response is not None else None
+        logger.error("Groq HTTPStatusError %s: %s", code, body)
+        return JsonResponse({"ok": False, "error": "groq_http_error", "status": code, "detail": body}, status=502)
+    except httpx.HTTPError as e:
         logger.exception("Groq HTTPError (réseau/timeout/SSL)")
-        return JsonResponse({"ok": False, "error": "transcription_failed"}, status=502)
-
-    except Exception:
+        return JsonResponse({"ok": False, "error": "transcription_failed", "detail": str(e)}, status=502)
+    except Exception as e:
         logger.exception("Unexpected server error")
-        return JsonResponse({"ok": False, "error": "server_error"}, status=500)
+        return JsonResponse({"ok": False, "error": "server_error", "detail": str(e)}, status=500)
+
+    # 7) Succès : on renvoie TOUJOURS quelque chose ici
+    try:
+        payload = resp.json()
+    except Exception:
+        # Au cas où Groq renverrait du texte brut
+        return JsonResponse({"ok": False, "error": "bad_response_format", "detail": resp.text[:500]}, status=502)
+
+    text = payload.get("text") or ""
+    return JsonResponse({"ok": True, "text": text}, status=200)
 
 
 
