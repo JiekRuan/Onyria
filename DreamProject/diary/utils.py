@@ -3,6 +3,7 @@ import json
 import math
 import tempfile
 import logging
+import time  #nouveau: backoff
 from datetime import datetime
 from django.core.files.base import ContentFile
 from dotenv import load_dotenv
@@ -11,10 +12,6 @@ from groq import Groq
 from mistralai import Mistral
 from collections import Counter
 from .models import Dream
-
-# --- ajout minimal pour logs réseau détaillés ---
-import httpx
-# ------------------------------------------------
 
 # Configuration du logging professionnel
 logger = logging.getLogger(__name__)
@@ -27,6 +24,10 @@ WHISPER_MODEL = "whisper-large-v3-turbo"
 DEFAULT_TEMPERATURE = 0.0
 MAX_FALLBACK_RETRIES = 3
 IMAGE_GENERATION_MODEL = "mistral-medium-2505"
+
+# ouveau: paramètres de retry pour la transcription
+TRANSCRIBE_MAX_RETRIES = 3
+TRANSCRIBE_BACKOFF_BASE = 1.5  # secondes (exponentiel: 1.5, 2.25, 3.38...)
 
 BASE_DIR = settings.BASE_DIR
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
@@ -94,58 +95,71 @@ def validate_and_fix_interpretation(interpretation_data):
 
 # ---------- TRANSCRIPTION ----------
 
+def _is_retryable_transcription_error(err: Exception) -> bool:
+    """nouveau: détecte les erreurs réseau/temporaires qui méritent un retry"""
+    msg = str(err).lower()
+    keywords = [
+        "connection error", "connection reset", "connection aborted",
+        "timeout", "temporarily unavailable", "service unavailable",
+        "tls", "ssl", "proxy", "rate limit", "503", "502", "429",
+    ]
+    return any(k in msg for k in keywords)
+
 def transcribe_audio(audio_data, language="fr"):
     """Transcrit un audio en texte avec Whisper de Groq"""
     logger.info(f"Début transcription audio - Langue: {language}")
-    
-    # --- ajout minimal : guard si clé manquante ---
+
+    # nouveau: garde-fou si la clé est absente/mal configurée en préprod
     if not GROQ_API_KEY:
-        logger.error("Transcription impossible: GROQ_API_KEY absent de l'environnement.")
+        logger.error("Échec transcription audio: GROQ_API_KEY manquante")
         return None
-    # ---------------------------------------------
-
-    # --- ajout minimal : ensure cleanup en finally ---
+    
     temp_file_path = None
-    # ------------------------------------------------
-
     try:
         with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
             temp_file.write(audio_data)
             temp_file_path = temp_file.name
 
-        with open(temp_file_path, "rb") as audio_file:
-            transcription = groq_client.audio.transcriptions.create(
-                file=audio_file,
-                model=WHISPER_MODEL,
-                prompt="Specify context or spelling",
-                response_format="verbose_json",
-                timestamp_granularities=["word", "segment"],
-                language=language,
-                temperature=DEFAULT_TEMPERATURE,
-            )
+        last_error = None
 
-        logger.info(f"Transcription réussie - {len(transcription.text)} caractères")
-        return transcription.text
+        for attempt in range(1, TRANSCRIBE_MAX_RETRIES + 1):
+            try:
+                logger.info(f"Transcription tentative {attempt}/{TRANSCRIBE_MAX_RETRIES}")
+                with open(temp_file_path, "rb") as audio_file:
+                    transcription = groq_client.audio.transcriptions.create(
+                        file=audio_file,
+                        model=WHISPER_MODEL,
+                        prompt="Specify context or spelling",
+                        response_format="verbose_json",
+                        timestamp_granularities=["word", "segment"],
+                        language=language,
+                        temperature=DEFAULT_TEMPERATURE,
+                    )
 
-    # --- ajout minimal : logs plus précis des erreurs réseau courantes ---
-    except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.ConnectError) as e:
-        logger.error("Erreur réseau vers l'API Groq (timeout/connexion).")
-        logger.exception(e)
+                logger.info(f"Transcription réussie - {len(transcription.text)} caractères")
+                return transcription.text
+
+            except Exception as e:
+                last_error = e
+                # nouveau: retry seulement si c'est une erreur réseau/temporaire
+                if _is_retryable_transcription_error(e) and attempt < TRANSCRIBE_MAX_RETRIES:
+                    sleep_s = round(TRANSCRIBE_BACKOFF_BASE ** attempt, 2)
+                    logger.warning(f"Transcription erreur réseau (retry dans {sleep_s}s): {e}")
+                    time.sleep(sleep_s)
+                    continue
+                else:
+                    logger.error(f"Échec transcription audio: {e}")
+                    break
+
         return None
-    # --------------------------------------------------------------------
 
-    except Exception as e:
-        logger.error(f"Échec transcription audio ({e.__class__.__name__}): {e}")
-        logger.exception(e)
-        return None
     finally:
-        # --- ajout minimal : suppression sûre du fichier temporaire ---
+        # Nettoyage du fichier temporaire même en cas d'erreur
         if temp_file_path and os.path.exists(temp_file_path):
             try:
                 os.unlink(temp_file_path)
-            except Exception:
-                pass
-        # ---------------------------------------------------------------
+            except Exception as e:
+                logger.warning(f"Impossible de supprimer le fichier temporaire: {e}")
 
 # ---------- FALLBACK SYSTEM ----------
 
