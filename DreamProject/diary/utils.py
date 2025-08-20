@@ -12,6 +12,10 @@ from mistralai import Mistral
 from collections import Counter
 from .models import Dream
 
+# --- ajout minimal pour logs réseau détaillés ---
+import httpx
+# ------------------------------------------------
+
 # Configuration du logging professionnel
 logger = logging.getLogger(__name__)
 
@@ -94,6 +98,16 @@ def transcribe_audio(audio_data, language="fr"):
     """Transcrit un audio en texte avec Whisper de Groq"""
     logger.info(f"Début transcription audio - Langue: {language}")
     
+    # --- ajout minimal : guard si clé manquante ---
+    if not GROQ_API_KEY:
+        logger.error("Transcription impossible: GROQ_API_KEY absent de l'environnement.")
+        return None
+    # ---------------------------------------------
+
+    # --- ajout minimal : ensure cleanup en finally ---
+    temp_file_path = None
+    # ------------------------------------------------
+
     try:
         with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
             temp_file.write(audio_data)
@@ -110,13 +124,28 @@ def transcribe_audio(audio_data, language="fr"):
                 temperature=DEFAULT_TEMPERATURE,
             )
 
-        os.unlink(temp_file_path)
         logger.info(f"Transcription réussie - {len(transcription.text)} caractères")
         return transcription.text
 
-    except Exception as e:
-        logger.error(f"Échec transcription audio: {e}")
+    # --- ajout minimal : logs plus précis des erreurs réseau courantes ---
+    except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.ConnectError) as e:
+        logger.error("Erreur réseau vers l'API Groq (timeout/connexion).")
+        logger.exception(e)
         return None
+    # --------------------------------------------------------------------
+
+    except Exception as e:
+        logger.error(f"Échec transcription audio ({e.__class__.__name__}): {e}")
+        logger.exception(e)
+        return None
+    finally:
+        # --- ajout minimal : suppression sûre du fichier temporaire ---
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.unlink(temp_file_path)
+            except Exception:
+                pass
+        # ---------------------------------------------------------------
 
 # ---------- FALLBACK SYSTEM ----------
 
