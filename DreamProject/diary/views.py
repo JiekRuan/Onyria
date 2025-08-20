@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
+import httpx
 from .models import Dream
 from collections import Counter
 from .utils import (
@@ -120,73 +121,48 @@ def transcribe(request):
 
 @require_http_methods(["POST"])
 @login_required
-@csrf_exempt
+@csrf_exempt  # retire si tu utilises déjà un token CSRF côté front
 def analyse_from_voice(request):
-    if 'audio' in request.FILES:
-        try:
-            audio_file = request.FILES['audio']
-            audio_data = audio_file.read()
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "method_not_allowed"}, status=405)
 
-            # Étape 1: Transcription
-            transcription = transcribe_audio(audio_data)
-            if not transcription:
-                return dream_analysis_error()
+    # 1) Récup audio envoyé par le front : FormData.append("audio", file, "record.webm")
+    audio = request.FILES.get("audio")
+    if not audio:
+        return JsonResponse({"ok": False, "error": "no_audio"}, status=400)
 
-            # Étape 2: Analyse des émotions
-            emotions, dominant_emotion = analyze_emotions(transcription)
-            if emotions is None or dominant_emotion is None:
-                return dream_analysis_error()
+    # 2) Clé Groq propre (pas de \n)
+    api_key = (os.getenv("GROQ_API_KEY") or "").strip()
+    if not api_key or "\n" in api_key or "\r" in api_key:
+        return JsonResponse({"ok": False, "error": "invalid_api_key"}, status=500)
 
-            # Étape 3: Classification du rêve
-            dream_type = classify_dream(emotions)
-            if dream_type is None:
-                return dream_analysis_error()
+    # 3) Appel Groq (OpenAI-compatible)
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    data = {"model": "whisper-large-v3"}  # adapte si besoin
+    files = {
+        "file": (audio.name, audio.read(), audio.content_type or "audio/webm")
+    }
 
-            # Étape 4: Interprétation
-            interpretation = interpret_dream(transcription)
-            if interpretation is None:
-                return dream_analysis_error()
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.post(url, headers=headers, data=data, files=files)
+            resp.raise_for_status()
+        text = resp.json().get("text", "")
+        return JsonResponse({"ok": True, "text": text}, status=200)
 
-            # Si tout s'est bien passé, créer le rêve
-            dream = Dream.objects.create(
-                user=request.user,
-                transcription=transcription,
-                emotions=emotions,
-                dominant_emotion=dominant_emotion[0],
-                dream_type=dream_type,
-                interpretation=interpretation,
-                is_analyzed=True,
-            )
-
-            # Génération d'image (peut échouer sans arrêter le processus)
-            generate_image_from_text(request.user, transcription, dream)
-
-            # Formatage des labels pour la réponse JSON
-            formatted_dominant_emotion = EMOTION_LABELS.get(
-                dominant_emotion[0], dominant_emotion[0].capitalize()
-            )
-            formatted_dream_type = DREAM_TYPE_LABELS.get(
-                dream_type, dream_type.capitalize()
-            )
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "transcription": transcription,
-                    "emotions": emotions,
-                    "dominant_emotion": [formatted_dominant_emotion],
-                    "dream_type": formatted_dream_type,
-                    "interpretation": interpretation,
-                    "image_path": dream.image_url,
-                }
-            )
-
-        except Exception as e:
-            return dream_analysis_error()
-
-    return JsonResponse(
-        {'success': False, 'error': 'Pas de fichier audio transmis'}
-    )
+    except httpx.HTTPStatusError as e:
+        # Remonte l’erreur Groq (utile en debug)
+        return JsonResponse({
+            "ok": False,
+            "error": "groq_http_error",
+            "status": e.response.status_code,
+            "detail": e.response.text[:500]
+        }, status=502)
+    except httpx.HTTPError:
+        return JsonResponse({"ok": False, "error": "transcription_failed"}, status=502)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "server_error"}, status=500)
 
 
 @login_required

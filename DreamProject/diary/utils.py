@@ -119,7 +119,11 @@ def _transcribe_via_httpx(file_path: str, language: str = "fr") -> str | None:
         return None
 
     url = "https://api.groq.com/openai/v1/audio/transcriptions"
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+    headers = {
+    "Authorization": f"Bearer {GROQ_API_KEY}",  # valeur propre
+    "Content-Type": "application/json",
+}
+    
 
     # Multipart form-data — liste de tuples pour gérer les champs répétés
     data = [
