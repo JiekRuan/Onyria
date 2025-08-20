@@ -7,36 +7,35 @@
 {% block content %}
 
 <!-- Titre -->
-<h2 class="text-3xl font-normal mb-6 text-center text-black">Inscription</h2>
+<h2 class="auth-title">Inscription</h2>
 
 <!-- Formulaire -->
-<form method="post" class="space-y-5">
+<form method="post" class="form-container">
     {% csrf_token %}
     {{ form.non_field_errors }}
 
     {% for field in form %}
         <div>
-            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-normal mb-1">
+            <label for="{{ field.id_for_label }}" class="form-label">
                 {{ field.label }}
             </label>
-            {{ field|add_class:"w-full px-4 py-2 bg-white border border-[#d9d1fa] rounded-lg shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] focus:outline-none focus:ring-2 focus:ring-[#d8c6f5] transition-all duration-150" }}
+            {{ field|add_class:"form-field" }}
             {% if field.errors %}
-                <p class="text-red-500 text-sm mt-1">{{ field.errors|striptags }}</p>
+                <p class="form-error">{{ field.errors|striptags }}</p>
             {% endif %}
         </div>
     {% endfor %}
 
     <!-- Bouton -->
-    <button type="submit"
-        class="btn-ballon">
+    <button type="submit" class="btn-ballon">
         S'inscrire
     </button>
 </form>
 
 <!-- Lien connexion -->
-<p class="mt-6 text-center text-sm text-gray-600">
+<p class="auth-link">
     Déjà inscrit ?
-    <a href="{% url 'login' %}" class="text-[#7961dd] hover:underline">Se connecter</a>
+    <a href="{% url 'login' %}">Se connecter</a>
 </p>
 
 {% endblock %}
