@@ -125,6 +125,7 @@ def transcribe(request):
 @login_required
 @csrf_exempt  # retire si tu utilises déjà un token CSRF côté front
 def analyse_from_voice(request):
+   def analyse_from_voice(request):
     logger.warning("analyse_from_voice: NEW VIEW ACTIVE")
 
     if request.method != "POST":
@@ -134,18 +135,55 @@ def analyse_from_voice(request):
     if not audio:
         return JsonResponse({"ok": False, "error": "no_audio"}, status=400)
 
+    # Clé Groq nettoyée
     api_key = (os.getenv("GROQ_API_KEY") or "").replace("\r","").replace("\n","").strip()
     if not api_key:
-        logger.error("GROQ_API_KEY manquante")
+        logger.error("GROQ_API_KEY manquante ou invalide")
         return JsonResponse({"ok": False, "error": "no_api_key"}, status=500)
 
     url = "https://api.groq.com/openai/v1/audio/transcriptions"
     headers = {"Authorization": f"Bearer {api_key}"}
     data = {"model": "whisper-large-v3"}
-    files = {"file": (audio.name, audio.read(), audio.content_type or "audio/webm")}
+
+    # ====== PATCH MIME/EXT (c'est ICI la modif importante) ======
+    orig_name = (audio.name or "audio")
+    orig_ctype = (audio.content_type or "").split(";", 1)[0].strip().lower()
+
+    ACCEPTED = {
+        "audio/flac": ".flac",
+        "audio/mpeg": ".mp3",   # mp3/mpga/mpeg
+        "audio/mp3": ".mp3",
+        "audio/mpga": ".mp3",
+        "audio/mp4": ".m4a",    # m4a
+        "video/mp4": ".mp4",    # toléré si Safari donne video/mp4
+        "audio/ogg": ".ogg",
+        "audio/opus": ".opus",
+        "audio/wav": ".wav",
+        "audio/webm": ".webm",
+    }
+
+    mime = orig_ctype if orig_ctype in ACCEPTED else ""
+    ext = ACCEPTED.get(mime)
+
+    if not ext:
+        lower = orig_name.lower()
+        for mt, ex in ACCEPTED.items():
+            if lower.endswith(ex):
+                mime, ext = mt, ex
+                break
+
+    if not mime:
+        # Fallback standard avec MediaRecorder
+        mime, ext = "audio/webm", ".webm"
+
+    safe_name = orig_name if orig_name.lower().endswith(ext) else f"record{ext}"
+    file_bytes = audio.read()
+
+    files = {"file": (safe_name, file_bytes, mime)}
+    logger.info("Envoi Groq: name=%s, mime=%s, size=%s", safe_name, mime, len(file_bytes))
+    # ====== FIN PATCH ======
 
     try:
-        logger.info("Calling Groq transcription: %s", url)
         with httpx.Client(timeout=60.0) as client:
             resp = client.post(url, headers=headers, data=data, files=files)
             resp.raise_for_status()
@@ -153,9 +191,9 @@ def analyse_from_voice(request):
         return JsonResponse({"ok": True, "text": text}, status=200)
 
     except httpx.HTTPStatusError as e:
-        # On logge TOUT pour savoir
         body = e.response.text[:1000] if e.response is not None else ""
-        logger.error("Groq HTTPStatusError %s: %s", e.response.status_code if e.response else "?", body)
+        logger.error("Groq HTTPStatusError %s: %s",
+                     e.response.status_code if e.response else "?", body)
         return JsonResponse({
             "ok": False,
             "error": "groq_http_error",
@@ -163,13 +201,14 @@ def analyse_from_voice(request):
             "detail": body
         }, status=502)
 
-    except httpx.HTTPError as e:
+    except httpx.HTTPError:
         logger.exception("Groq HTTPError (réseau/timeout/SSL)")
         return JsonResponse({"ok": False, "error": "transcription_failed"}, status=502)
 
     except Exception:
         logger.exception("Unexpected server error")
         return JsonResponse({"ok": False, "error": "server_error"}, status=500)
+
 
 
 @login_required
