@@ -15,11 +15,6 @@ from pathlib import Path
 
 import dj_database_url
 
-_raw = os.getenv("GROQ_API_KEY") or ""
-_clean = _raw.replace("\r", "").replace("\n", "").strip()
-if _raw != _clean:
-    os.environ["GROQ_API_KEY"] = _clean
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -98,12 +93,6 @@ DATABASES = {
 }
 database_url = os.environ.get("DATABASE_URL")
 DATABASES['default'] = dj_database_url.parse(database_url)
-
-
-GROQ_API_KEY = (os.getenv("GROQ_API_KEY") or "").strip()  # <- supprime \n, espaces
-if not GROQ_API_KEY or "\n" in GROQ_API_KEY or "\r" in GROQ_API_KEY:
-    raise RuntimeError("GROQ_API_KEY invalide (vide ou contient des sauts de ligne).")
-
 
 
 # Password validation
