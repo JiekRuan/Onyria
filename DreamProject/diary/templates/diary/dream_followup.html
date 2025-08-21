@@ -1,7 +1,13 @@
-{% extends "diary/base.html" %} {% load static %} {% block title %}Suivi de mes
-rêves{% endblock %} {% block content %}
+{% extends "diary/base.html" %} 
+{% load static %} 
+
+{% block title %}Suivi de mes rêves{% endblock %} 
+
+{% block content %}
+
+<!-- En-tête principal -->
 <div class="text-center mb-8">
-  <h1 class="text-3xl text-black mb-4">Suivi de mes rêves</h1>
+  <h1 class="text-3xl text-black mb-2">Suivi de mes rêves</h1>
   <p class="text-gray-600 text-sm">
     Analysez l'évolution de vos rêves et découvrez vos patterns oniriques
   </p>
@@ -9,31 +15,73 @@ rêves{% endblock %} {% block content %}
 
 {% if has_data %}
 
-<!-- Section 1: Suivi du type de rêve -->
-<div class="mb-12">
+<!-- Section 1: Types de rêves -->
+<div class="mb-8">
   <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">
     Types de rêves
   </h2>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Graphique pourcentages -->
     <div class="pastel-vanilla">
-      <h3 class="text-lg font-medium mb-4 text-center">Répartition globale</h3>
-      <div class="h-64">
-        <canvas id="dreamTypePieChart"></canvas>
+      <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-4 text-center">Répartition globale</h3>
+      <div class="h-64 flex items-center justify-center">
+        <canvas id="dreamTypePieChart" class="max-w-full max-h-full"></canvas>
+      </div>
+      <div class="mt-4 text-xs sm:text-sm text-gray-600 text-center">
+        Total : {{ dream_type_stats.total }} rêve{{ dream_type_stats.total|pluralize }}
       </div>
     </div>
 
     <!-- Graphique temporalité -->
     <div class="pastel-baby-powder">
-      <h3 class="text-lg font-medium mb-4 text-center">
+      <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-4 text-center">
         Évolution dans le temps
       </h3>
-      <div class="h-64">
-        <canvas id="dreamTypeTimelineChart"></canvas>
+      <div class="h-64 flex items-center justify-center">
+        <canvas id="dreamTypeTimelineChart" class="max-w-full max-h-full"></canvas>
       </div>
-      <div class="mt-4 text-sm text-gray-600 text-center">
+      <div class="mt-4 text-xs sm:text-sm text-gray-600 text-center">
         Évolution par jour
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Séparateur -->
+<hr class="border-t border-[#ede9f9] mb-8">
+
+<!-- Section 2: Émotions dominantes -->
+<div class="mb-8">
+  <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">
+    Émotions dominantes
+  </h2>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Graphique pourcentages émotions -->
+    <div class="pastel-champagne">
+      <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-4 text-center">
+        Répartition des émotions
+      </h3>
+      <div class="h-64 flex items-center justify-center">
+        <canvas id="emotionsPieChart" class="max-w-full max-h-full"></canvas>
+      </div>
+      <div class="mt-4 text-xs sm:text-sm text-gray-600 text-center">
+        {{ emotions_stats|length }} émotion{{ emotions_stats|length|pluralize }}
+        identifiée{{ emotions_stats|length|pluralize }}
+      </div>
+    </div>
+
+    <!-- Graphique temporalité émotions -->
+    <div class="pastel-yellow">
+      <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-4 text-center">
+        Évolution émotionnelle
+      </h3>
+      <div class="h-64 flex items-center justify-center">
+        <canvas id="emotionsTimelineChart" class="max-w-full max-h-full"></canvas>
+      </div>
+      <div class="mt-4 text-xs sm:text-sm text-gray-600 text-center">
+        Humeurs au fil du temps
       </div>
     </div>
   </div>
@@ -49,9 +97,7 @@ rêves{% endblock %} {% block content %}
         aria-hidden="true"
         alt=""
       />
-      <span class="ai-disclaimer__title"
-        >Avertissement sur les statistiques</span
-      >
+      <span class="ai-disclaimer__title">Avertissement sur les statistiques</span>
     </summary>
     <div class="ai-disclaimer__content">
       <p>
@@ -60,7 +106,7 @@ rêves{% endblock %} {% block content %}
         vos patterns oniriques mais ne constituent pas un diagnostic médical ou
         psychologique.
       </p>
-      <p class="mt-1">
+      <p class="mt-2">
         L'interprétation de ces données doit se faire avec prudence et ne
         remplace en aucun cas l'avis d'un professionnel de santé.
       </p>
@@ -73,8 +119,8 @@ rêves{% endblock %} {% block content %}
 <!-- Message si pas de données -->
 <div class="text-center py-12">
   <div class="pastel-baby-powder max-w-md mx-auto">
-    <h3 class="text-xl font-medium mb-4">Pas encore de données</h3>
-    <p class="text-gray-600 mb-6">
+    <h3 class="text-lg sm:text-xl font-semibold mb-4">Pas encore de données</h3>
+    <p class="text-xs sm:text-sm text-gray-600 mb-6 leading-relaxed">
       Enregistrez quelques rêves pour voir apparaître vos statistiques
       personnalisées !
     </p>
@@ -90,16 +136,30 @@ rêves{% endblock %} {% block content %}
 <script src="{% static 'js/chart.min.js' %}"></script>
 {% if has_data %}
 <script>
-  // Configuration des couleurs pour cohérence visuelle
+  // Configuration des couleurs pour cohérence visuelle avec contraste amélioré
   const colors = {
-    reve: '#B3E5FC',
-    cauchemar: '#F4B6B6',
-  }
+    reve: '#4e3f86',      // Votre couleur brand principale pour les rêves
+    cauchemar: '#E6C98C',  // Couleur pastel-yellow plus foncée pour les cauchemars
+    emotions: [
+      '#4e3f86', '#E6C98C', '#D8D3C3', '#c7a96b',
+      '#9a8472', '#b5a491', '#8b7355', '#a69684'
+    ]
+  };
 
   // Données des graphiques depuis Django
   const dreamTypeStats = {{ dream_type_stats|safe }};
   const dreamTypeTimeline = {{ dream_type_timeline|safe }};
-
+  const emotionsStats = {{ emotions_stats|safe }};
+  const emotionsTimeline = {{ emotions_timeline|safe }};
+  const emotionsList = {{ emotions_list|safe }};
+  
+  // Configuration Chart.js par défaut
+  Chart.defaults.font.family = "'Schibsted Grotesk', sans-serif";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+  Chart.defaults.plugins.legend.labels.padding = 15;
+  
   // 1. Graphique en secteurs - Types de rêves
   const ctxPie = document.getElementById('dreamTypePieChart').getContext('2d');
   new Chart(ctxPie, {
@@ -110,7 +170,9 @@ rêves{% endblock %} {% block content %}
         data: [dreamTypeStats.percentages.rêve, dreamTypeStats.percentages.cauchemar],
         backgroundColor: [colors.reve, colors.cauchemar],
         borderWidth: 2,
-        borderColor: '#fff'
+        borderColor: '#ffffff',
+        hoverBorderWidth: 3,
+        hoverOffset: 4
       }]
     },
     options: {
@@ -121,16 +183,27 @@ rêves{% endblock %} {% block content %}
           position: 'bottom',
           labels: {
             padding: 20,
-            font: { size: 14 }
+            font: { size: 13, weight: '500' },
+            color: '#374151'
           }
         },
         tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          borderColor: '#d1d5db',
+          borderWidth: 1,
+          cornerRadius: 8,
+          displayColors: true,
           callbacks: {
             label: function(context) {
               return context.label + ': ' + context.parsed + '%';
             }
           }
         }
+      },
+      layout: {
+        padding: 20
       }
     }
   });
@@ -140,39 +213,222 @@ rêves{% endblock %} {% block content %}
   new Chart(ctxTimeline, {
     type: 'line',
     data: {
-      labels: dreamTypeTimeline.map(d => new Date(d.date).toLocaleDateString('fr-FR')),
+      labels: dreamTypeTimeline.map(d => new Date(d.date).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit'
+      })),
       datasets: [{
         label: 'Rêves',
         data: dreamTypeTimeline.map(d => d.rêve),
         borderColor: colors.reve,
-        backgroundColor: colors.reve + '40',
+        backgroundColor: colors.reve + '30',
+        borderWidth: 3,
         tension: 0.4,
-        fill: false
+        fill: false,
+        pointBackgroundColor: colors.reve,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7
       }, {
         label: 'Cauchemars',
         data: dreamTypeTimeline.map(d => d.cauchemar),
         borderColor: colors.cauchemar,
-        backgroundColor: colors.cauchemar + '40',
+        backgroundColor: colors.cauchemar + '30',
+        borderWidth: 3,
         tension: 0.4,
-        fill: false
+        fill: false,
+        pointBackgroundColor: colors.cauchemar,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
       scales: {
         y: {
           beginAtZero: true,
-          ticks: { stepSize: 1 }
+          ticks: { 
+            stepSize: 1,
+            color: '#6b7280'
+          },
+          grid: {
+            color: '#f3f4f6'
+          }
+        },
+        x: {
+          ticks: {
+            color: '#6b7280'
+          },
+          grid: {
+            color: '#f3f4f6'
+          }
         }
       },
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { padding: 20, font: { size: 14 } }
+          labels: { 
+            padding: 20, 
+            font: { size: 13, weight: '500' },
+            color: '#374151'
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          borderColor: '#d1d5db',
+          borderWidth: 1,
+          cornerRadius: 8
         }
+      },
+      layout: {
+        padding: 15
       }
     }
   });
+
+  // 3. Graphique en secteurs - Émotions
+  if (Object.keys(emotionsStats).length > 0) {
+    const ctxEmotions = document.getElementById('emotionsPieChart').getContext('2d');
+    const emotionLabels = Object.keys(emotionsStats);
+    const emotionData = emotionLabels.map(label => emotionsStats[label].percentage);
+
+    new Chart(ctxEmotions, {
+      type: 'pie',
+      data: {
+        labels: emotionLabels,
+        datasets: [{
+          data: emotionData,
+          backgroundColor: colors.emotions.slice(0, emotionLabels.length),
+          borderWidth: 3,
+          borderColor: '#ffffff',
+          hoverBorderWidth: 4,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 15,
+              font: { size: 11, weight: '500' },
+              color: '#374151'
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#d1d5db',
+            borderWidth: 1,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(context) {
+                return context.label + ': ' + context.parsed + '%';
+              }
+            }
+          }
+        },
+        layout: {
+          padding: 15
+        }
+      }
+    });
+  }
+
+  // 4. Graphique timeline - Émotions
+  if (emotionsTimeline.length > 0 && emotionsList.length > 0) {
+    const ctxEmotionsTimeline = document.getElementById('emotionsTimelineChart').getContext('2d');
+
+    const datasets = emotionsList.map((emotion, index) => ({
+      label: emotion.label,
+      data: emotionsTimeline.map(d => d[emotion.key] || 0),
+      borderColor: colors.emotions[index % colors.emotions.length],
+      backgroundColor: colors.emotions[index % colors.emotions.length] + '30',
+      borderWidth: 3,
+      tension: 0.4,
+      fill: false,
+      pointBackgroundColor: colors.emotions[index % colors.emotions.length],
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    }));
+
+    new Chart(ctxEmotionsTimeline, {
+      type: 'line',
+      data: {
+        labels: emotionsTimeline.map(d => new Date(d.date).toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit'
+        })),
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { 
+              stepSize: 1,
+              color: '#6b7280'
+            },
+            grid: {
+              color: '#f3f4f6'
+            }
+          },
+          x: {
+            ticks: {
+              color: '#6b7280'
+            },
+            grid: {
+              color: '#f3f4f6'
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { 
+              padding: 12, 
+              font: { size: 10, weight: '500' },
+              color: '#374151'
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#d1d5db',
+            borderWidth: 1,
+            cornerRadius: 8
+          }
+        },
+        layout: {
+          padding: 15
+        }
+      }
+    });
+  }
+
 </script>
-{% endif %} {% endblock %}
+{% endif %} 
+
+{% endblock %}

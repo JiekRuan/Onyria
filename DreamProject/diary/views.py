@@ -15,6 +15,8 @@ from .utils import (
     get_profil_onirique_stats,
     get_dream_type_stats,
     get_dream_type_timeline,
+    get_emotions_stats,
+    get_emotions_timeline,
 )
 from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
 
@@ -198,10 +200,35 @@ def dream_followup(request):
     # Récupération des données
     dream_type_stats = get_dream_type_stats(request.user)
     dream_type_timeline = get_dream_type_timeline(request.user)
+    emotions_stats = get_emotions_stats(request.user)
+    emotions_timeline, emotions_list = get_emotions_timeline(request.user)
+
+    # Formatage des émotions avec les labels français
+    formatted_emotions_stats = {}
+    if emotions_stats['percentages']:
+        for emotion, percentage in emotions_stats['percentages'].items():
+            formatted_label = EMOTION_LABELS.get(emotion, emotion.capitalize())
+            formatted_emotions_stats[formatted_label] = {
+                'percentage': percentage,
+                'count': emotions_stats['counts'][emotion],
+            }
+
+    # Formatage des émotions pour la timeline
+    formatted_emotions_list = []
+    for emotion in emotions_list:
+        formatted_emotions_list.append(
+            {
+                'key': emotion,
+                'label': EMOTION_LABELS.get(emotion, emotion.capitalize()),
+            }
+        )
 
     context = {
         'dream_type_stats': dream_type_stats,
         'dream_type_timeline': dream_type_timeline,
+        'emotions_stats': formatted_emotions_stats,
+        'emotions_timeline': emotions_timeline,
+        'emotions_list': formatted_emotions_list,
         'has_data': dream_type_stats['total'] > 0,
     }
 
