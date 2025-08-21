@@ -447,3 +447,67 @@ def get_dream_type_timeline(user):
         })
     
     return timeline_list
+
+def get_emotions_stats(user):
+    """Calcule les statistiques des émotions/humeurs pour les graphiques"""
+    logger.info(f"Calcul statistiques des émotions pour utilisateur: {user.id}")
+    
+    dreams = Dream.objects.filter(user=user).exclude(dominant_emotion__isnull=True)
+    total = dreams.count()
+    
+    if total == 0:
+        return {
+            'percentages': {},
+            'counts': {},
+            'total': 0
+        }
+    
+    emotion_counts = Counter(dreams.values_list('dominant_emotion', flat=True))
+    
+    # Calculer les pourcentages
+    emotion_percentages = {}
+    for emotion, count in emotion_counts.items():
+        emotion_percentages[emotion] = round((count / total) * 100, 1)
+    
+    return {
+        'percentages': emotion_percentages,
+        'counts': dict(emotion_counts),
+        'total': total
+    }
+
+
+def get_emotions_timeline(user):
+    """Récupère l'évolution des émotions dominantes dans le temps"""
+    
+    logger.info(f"Calcul timeline émotions pour utilisateur: {user.id}")
+    
+    dreams = Dream.objects.filter(user=user).exclude(
+        dominant_emotion__isnull=True
+    ).annotate(
+        date_only=TruncDate('created_at')
+    ).values('date_only', 'dominant_emotion').annotate(
+        count=Count('id')
+    ).order_by('date_only')
+    
+    # Organiser les données par date
+    timeline_data = {}
+    all_emotions = set()
+    
+    for dream in dreams:
+        date_str = dream['date_only'].strftime('%Y-%m-%d')
+        emotion = dream['dominant_emotion']
+        all_emotions.add(emotion)
+        
+        if date_str not in timeline_data:
+            timeline_data[date_str] = {}
+        timeline_data[date_str][emotion] = dream['count']
+    
+    # Convertir en liste pour le frontend
+    timeline_list = []
+    for date_str in sorted(timeline_data.keys()):
+        entry = {'date': date_str}
+        for emotion in all_emotions:
+            entry[emotion] = timeline_data[date_str].get(emotion, 0)
+        timeline_list.append(entry)
+    
+    return timeline_list, list(all_emotions)
