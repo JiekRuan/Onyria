@@ -1,4 +1,5 @@
 # diary/views.py
+import json
 import os
 import logging
 import httpx
@@ -25,6 +26,22 @@ def dream_diary_view(request):
 def transcribe(request):
     # Alias pour compat ancienne route -> réutilise ton endpoint existant
     return analyse_from_voice(request)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def dream_followup(request):
+    """
+    Endpoint de suivi après l’analyse d’un rêve.
+    Remplace le contenu par ta logique (LLM, règles, etc.).
+    """
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+
+    question = payload.get("question") or payload.get("message") or ""
+    # TODO: branche ta logique réelle ici
+    render(request, "diary/followup.html")
 
 # ---- Uniform JSON helpers ----------------------------------------------------
 def api_success(text: str):
