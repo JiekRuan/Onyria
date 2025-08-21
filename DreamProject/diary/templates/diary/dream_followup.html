@@ -1,11 +1,178 @@
-{% extends "diary/base.html" %}
-{% load static %}
-
-{% block title %}Suivi de mes rêves{% endblock %}
-
-{% block content %}
-<div class="text-center">
-  <h1 class="text-3xl text-black mb-8">Suivi de mes rêves</h1>
-  <p class="text-gray-500 mb-10">Cette section est en cours de développement...</p>
+{% extends "diary/base.html" %} {% load static %} {% block title %}Suivi de mes
+rêves{% endblock %} {% block content %}
+<div class="text-center mb-8">
+  <h1 class="text-3xl text-black mb-4">Suivi de mes rêves</h1>
+  <p class="text-gray-600 text-sm">
+    Analysez l'évolution de vos rêves et découvrez vos patterns oniriques
+  </p>
 </div>
-{% endblock %}
+
+{% if has_data %}
+
+<!-- Section 1: Suivi du type de rêve -->
+<div class="mb-12">
+  <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">
+    Types de rêves
+  </h2>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Graphique pourcentages -->
+    <div class="pastel-vanilla">
+      <h3 class="text-lg font-medium mb-4 text-center">Répartition globale</h3>
+      <div class="h-64">
+        <canvas id="dreamTypePieChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Graphique temporalité -->
+    <div class="pastel-baby-powder">
+      <h3 class="text-lg font-medium mb-4 text-center">
+        Évolution dans le temps
+      </h3>
+      <div class="h-64">
+        <canvas id="dreamTypeTimelineChart"></canvas>
+      </div>
+      <div class="mt-4 text-sm text-gray-600 text-center">
+        Évolution par jour
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Avertissement -->
+<div class="mt-8">
+  <details class="ai-disclaimer">
+    <summary class="ai-disclaimer__summary flex items-center gap-2">
+      <img
+        src="{% static 'img/warning.png' %}"
+        class="w-4 h-4 md:w-5 md:h-5 align-middle"
+        aria-hidden="true"
+        alt=""
+      />
+      <span class="ai-disclaimer__title"
+        >Avertissement sur les statistiques</span
+      >
+    </summary>
+    <div class="ai-disclaimer__content">
+      <p>
+        Ces statistiques sont générées automatiquement à partir de vos rêves
+        enregistrés et analysés par IA. Elles visent à vous donner un aperçu de
+        vos patterns oniriques mais ne constituent pas un diagnostic médical ou
+        psychologique.
+      </p>
+      <p class="mt-1">
+        L'interprétation de ces données doit se faire avec prudence et ne
+        remplace en aucun cas l'avis d'un professionnel de santé.
+      </p>
+    </div>
+  </details>
+</div>
+
+{% else %}
+
+<!-- Message si pas de données -->
+<div class="text-center py-12">
+  <div class="pastel-baby-powder max-w-md mx-auto">
+    <h3 class="text-xl font-medium mb-4">Pas encore de données</h3>
+    <p class="text-gray-600 mb-6">
+      Enregistrez quelques rêves pour voir apparaître vos statistiques
+      personnalisées !
+    </p>
+    <a href="{% url 'dream_recorder' %}" class="btn-ballon-sm">
+      Enregistrer mon premier rêve
+    </a>
+  </div>
+</div>
+
+{% endif %}
+
+<!-- Scripts pour les graphiques -->
+<script src="{% static 'js/chart.min.js' %}"></script>
+{% if has_data %}
+<script>
+  // Configuration des couleurs pour cohérence visuelle
+  const colors = {
+    reve: '#B3E5FC',
+    cauchemar: '#F4B6B6',
+  }
+
+  // Données des graphiques depuis Django
+  const dreamTypeStats = {{ dream_type_stats|safe }};
+  const dreamTypeTimeline = {{ dream_type_timeline|safe }};
+
+  // 1. Graphique en secteurs - Types de rêves
+  const ctxPie = document.getElementById('dreamTypePieChart').getContext('2d');
+  new Chart(ctxPie, {
+    type: 'pie',
+    data: {
+      labels: ['Rêves', 'Cauchemars'],
+      datasets: [{
+        data: [dreamTypeStats.percentages.rêve, dreamTypeStats.percentages.cauchemar],
+        backgroundColor: [colors.reve, colors.cauchemar],
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            padding: 20,
+            font: { size: 14 }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.label + ': ' + context.parsed + '%';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // 2. Graphique timeline - Types de rêves
+  const ctxTimeline = document.getElementById('dreamTypeTimelineChart').getContext('2d');
+  new Chart(ctxTimeline, {
+    type: 'line',
+    data: {
+      labels: dreamTypeTimeline.map(d => new Date(d.date).toLocaleDateString('fr-FR')),
+      datasets: [{
+        label: 'Rêves',
+        data: dreamTypeTimeline.map(d => d.rêve),
+        borderColor: colors.reve,
+        backgroundColor: colors.reve + '40',
+        tension: 0.4,
+        fill: false
+      }, {
+        label: 'Cauchemars',
+        data: dreamTypeTimeline.map(d => d.cauchemar),
+        borderColor: colors.cauchemar,
+        backgroundColor: colors.cauchemar + '40',
+        tension: 0.4,
+        fill: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { stepSize: 1 }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { padding: 20, font: { size: 14 } }
+        }
+      }
+    }
+  });
+</script>
+{% endif %} {% endblock %}

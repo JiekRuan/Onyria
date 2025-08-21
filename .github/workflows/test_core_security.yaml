@@ -2,9 +2,6 @@ name: Tests à chaque push
 
 on:
   push:
-    branches: 116-automatiser-les-tests
-  pull_request:
-    branches: 116-automatiser-les-tests
 
 env:
   PYTHON_VERSION: '3.11'
