@@ -3,10 +3,22 @@ import os
 import logging
 import httpx
 from django.http import JsonResponse, HttpRequest
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 
 logger = logging.getLogger(__name__)
+
+
+@require_http_methods(["GET"])
+def dream_recorder_view(request):
+    # Rend simplement la page d’enregistrement (adapté à ton template existant)
+    return render(request, "diary/record.html")
+
+@require_http_methods(["GET"])
+def dream_diary_view(request):
+    # Page racine du module diary -> redirige vers la page 'record'
+    return redirect("dream_recorder")
 
 # ---- Uniform JSON helpers ----------------------------------------------------
 def api_success(text: str):
