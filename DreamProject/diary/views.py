@@ -3,10 +3,12 @@ import json
 import os
 import logging
 import httpx
-from django.http import JsonResponse, HttpRequest
-from django.shortcuts import redirect, render
+from django.http import HttpResponse, JsonResponse, HttpRequest
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+
+from DreamProject.diary.models import Dream
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,10 @@ def dream_followup(request):
     question = payload.get("question") or payload.get("message") or ""
     # TODO: branche ta logique réelle ici
     render(request, "diary/followup.html")
+
+def dream_detail_view(request: HttpRequest, dream_id: int) -> HttpResponse:
+    dream = get_object_or_404(Dream, id=dream_id)  # or pk=dream_id
+    return render(request, "diary/dream_detail.html", {"dream": dream})
 
 # ---- Uniform JSON helpers ----------------------------------------------------
 def api_success(text: str):
