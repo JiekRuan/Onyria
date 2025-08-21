@@ -204,11 +204,18 @@ def analyse_from_voice(request: HttpRequest):
     try:
         payload = resp.json()
     except Exception:
-        # Au cas où Groq renverrait du texte brut
         return JsonResponse({"ok": False, "error": "bad_response_format", "detail": resp.text[:500]}, status=502)
 
-    text = payload.get("text") or ""
-    return JsonResponse({"ok": True, "text": text}, status=200)
+    text = (payload.get("text") or "").strip()
+
+# ⬇️ Remplace ton return de succès par CE bloc
+    return JsonResponse({
+        "ok": True,
+        "text": text,
+        "transcript": text,  # alias pour front qui attend 'transcript'
+        "result": text,      # alias pour front qui attend 'result'
+        "message": text      # alias pour front qui attend 'message'
+    }, status=200)
 
 
 
