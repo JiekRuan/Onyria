@@ -5,6 +5,8 @@ import tempfile
 import logging
 from datetime import datetime
 from django.core.files.base import ContentFile
+from django.db.models import Count
+from django.db.models.functions import TruncDate
 from dotenv import load_dotenv
 from django.conf import settings
 from groq import Groq
@@ -384,3 +386,64 @@ def get_profil_onirique_stats(user):
         "emotion_dominante": emotion_dominante,
         "emotion_dominante_percentage": emotion_percentage,
     }
+    
+# ---------- DASHBOARD PERSONNEL ----------
+#----------- Suivi du type de reve --------
+def get_dream_type_stats(user):
+    """Calcule les statistiques des types de rêves pour les graphiques"""
+    logger.info(f"Calcul statistiques des types de rêves pour utilisateur: {user.id}")
+    
+    dreams = Dream.objects.filter(user=user)
+    total = dreams.count()
+    
+    if total == 0:
+        return {
+            'percentages': {'rêve': 0, 'cauchemar': 0},
+            'counts': {'rêve': 0, 'cauchemar': 0},
+            'total': 0
+        }
+    
+    nb_reves = dreams.filter(dream_type='rêve').count()
+    nb_cauchemars = dreams.filter(dream_type='cauchemar').count()
+    
+    return {
+        'percentages': {
+            'rêve': round((nb_reves / total) * 100, 1),
+            'cauchemar': round((nb_cauchemars / total) * 100, 1)
+        },
+        'counts': {
+            'rêve': nb_reves,
+            'cauchemar': nb_cauchemars
+        },
+        'total': total
+    }
+
+def get_dream_type_timeline(user):
+    """Récupère l'évolution des types de rêves dans le temps"""
+
+    logger.info(f"Calcul timeline types de rêves pour utilisateur: {user.id}")
+    
+    dreams = Dream.objects.filter(user=user).annotate(
+        date_only=TruncDate('created_at')
+    ).values('date_only', 'dream_type').annotate(
+        count=Count('id')
+    ).order_by('date_only')
+    
+    # Organiser les données par date
+    timeline_data = {}
+    for dream in dreams:
+        date_str = dream['date_only'].strftime('%Y-%m-%d')
+        if date_str not in timeline_data:
+            timeline_data[date_str] = {'rêve': 0, 'cauchemar': 0}
+        timeline_data[date_str][dream['dream_type']] = dream['count']
+    
+    # Convertir en liste pour le frontend
+    timeline_list = []
+    for date_str, counts in sorted(timeline_data.items()):
+        timeline_list.append({
+            'date': date_str,
+            'rêve': counts['rêve'],
+            'cauchemar': counts['cauchemar']
+        })
+    
+    return timeline_list

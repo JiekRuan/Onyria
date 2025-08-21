@@ -13,6 +13,8 @@ from .utils import (
     interpret_dream,
     generate_image_from_text,
     get_profil_onirique_stats,
+    get_dream_type_stats,
+    get_dream_type_timeline,
 )
 from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
 
@@ -71,7 +73,7 @@ def dream_detail_view(request, dream_id):
     else:
         formatted_dominant_emotion = "Non analysé"
         formatted_dream_type = "Non analysé"
-        
+
     # Parser l'interprétation si c'est une string JSON
     interpretation = dream.interpretation
     if isinstance(interpretation, str):
@@ -191,5 +193,16 @@ def analyse_from_voice(request):
 
 @login_required
 def dream_followup(request):
-    """Page de suivi des rêves (placeholder)"""
-    return render(request, 'diary/dream_followup.html')
+    """Page de suivi des rêves avec statistiques et graphiques"""
+
+    # Récupération des données
+    dream_type_stats = get_dream_type_stats(request.user)
+    dream_type_timeline = get_dream_type_timeline(request.user)
+
+    context = {
+        'dream_type_stats': dream_type_stats,
+        'dream_type_timeline': dream_type_timeline,
+        'has_data': dream_type_stats['total'] > 0,
+    }
+
+    return render(request, 'diary/dream_followup.html', context)
