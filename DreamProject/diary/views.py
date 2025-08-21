@@ -20,6 +20,12 @@ def dream_diary_view(request):
     # Page racine du module diary -> redirige vers la page 'record'
     return redirect("dream_recorder")
 
+@csrf_exempt
+@require_http_methods(["POST"])
+def transcribe(request):
+    # Alias pour compat ancienne route -> réutilise ton endpoint existant
+    return analyse_from_voice(request)
+
 # ---- Uniform JSON helpers ----------------------------------------------------
 def api_success(text: str):
     """Return a success JSON with multiple aliases so any front key works."""
