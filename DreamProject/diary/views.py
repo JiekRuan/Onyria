@@ -3,6 +3,7 @@ import os
 import logging
 import httpx
 from django.http import JsonResponse, HttpRequest
+from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger(__name__)
@@ -156,3 +157,8 @@ def groq_health(request: HttpRequest):
         return api_error(f"groq_http_error: {code} {body}", 502)
     except httpx.HTTPError as e:
         return api_error(f"network_error: {e}", 502)
+    
+
+def dream_diary_view(request):
+    # Le plus simple : rediriger vers ta page d’enregistrement existante
+    return redirect('/diary/record/')
