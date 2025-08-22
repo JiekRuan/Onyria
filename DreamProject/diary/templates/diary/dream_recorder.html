@@ -91,7 +91,7 @@
 
   // Suivi du flux SSE (succès/erreur)
   let hadError = false;      // si une étape modèle échoue
-  let sawComplete = false;   // si on a reçu l’event 'complete'
+  let sawComplete = false;   // si on a reçu l'event 'complete'
 
   // ===== RÉFÉRENCES DOM =====
   // Éléments de contrôle de l'enregistrement
@@ -201,13 +201,16 @@
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = ''; // Buffer pour accumuler les données
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        buffer += chunk; 
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
@@ -216,6 +219,7 @@
               handleStreamEvent(data);
             } catch (e) {
               console.error('Erreur parsing SSE:', e);
+              console.error('Ligne problématique:', line.substring(0, 100) + '...');
             }
           }
         }
@@ -289,15 +293,27 @@
         break;
       
       case 'image':
-        const imagePath = data.data.image_path || "{% static 'img/placeholder.png' %}";
-        imageRevee.innerHTML = "";
-        const img = document.createElement("img");
-        img.src = imagePath;
+      imageRevee.innerHTML = "";
+      
+      const img = document.createElement("img");
+      
+      if (data.data.image_path) {
+        img.src = data.data.image_path;
         img.alt = "Image du rêve";
-        img.className = "pastel-image w-full aspect-[4/3] object-cover mx-auto";
-        imageRevee.appendChild(img);
-        sectionImage.style.display = "block";
-        break;
+      } else {
+        img.src = "{% static 'img/placeholder.png' %}";
+        img.alt = "Image non disponible";
+      }
+      
+      img.className = "pastel-image w-full aspect-[4/3] object-cover mx-auto";
+      img.onerror = function() {
+        console.error('Erreur chargement image');
+        this.style.display = 'none';
+      };
+      
+      imageRevee.appendChild(img);
+      sectionImage.style.display = "block";
+      break;
 
       case 'complete':
         sawComplete = true; // succès confirmé

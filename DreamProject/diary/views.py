@@ -208,11 +208,18 @@ def analyse_from_voice(request):
             )
             logger.debug(f"Rêve {dream.id} créé")
 
-            # Image (optionnelle)
+            # Image
             image_success = generate_image_from_text(request.user, transcription, dream)
-            if image_success and dream.image_url:
-                yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': dream.image_url}})}\n\n"
+            if image_success:
+                dream.refresh_from_db()
+                if dream.image_url:
+                    logger.info(f"Image envoyée via SSE pour rêve {dream.id}")
+                    yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': dream.image_url}})}\n\n"
+                else:
+                    logger.warning(f"Image générée mais URL manquante pour rêve {dream.id}")
+                    yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': None}})}\n\n"
             else:
+                logger.warning(f"Échec génération image pour rêve {dream.id}")
                 yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': None}})}\n\n"
 
             # Interprétation
