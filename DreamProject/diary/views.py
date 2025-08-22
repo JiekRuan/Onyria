@@ -1,4 +1,6 @@
 import json
+from datetime import datetime
+import logging
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -13,12 +15,14 @@ from .utils import (
     interpret_dream,
     generate_image_from_text,
     get_profil_onirique_stats,
-    get_dream_type_stats,
-    get_dream_type_timeline,
-    get_emotions_stats,
-    get_emotions_timeline,
+    get_dream_type_stats_filtered,
+    get_dream_type_timeline_filtered,
+    get_emotions_stats_filtered,
+    get_emotions_timeline_filtered,
 )
 from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
+
+logger = logging.getLogger(__name__)
 
 
 def dream_analysis_error():
@@ -192,16 +196,32 @@ def analyse_from_voice(request):
         {'success': False, 'error': 'Pas de fichier audio transmis'}
     )
 
-
 @login_required
 def dream_followup(request):
-    """Page de suivi des rêves avec statistiques et graphiques"""
+    """Page de suivi des rêves avec statistiques et graphiques + filtres temporels"""
 
-    # Récupération des données
-    dream_type_stats = get_dream_type_stats(request.user)
-    dream_type_timeline = get_dream_type_timeline(request.user)
-    emotions_stats = get_emotions_stats(request.user)
-    emotions_timeline, emotions_list = get_emotions_timeline(request.user)
+    # Récupération des paramètres de filtre
+    period = request.GET.get('period', 'all')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    logger.info(
+        f"Filtres appliqués - Period: {period}, Start: {start_date}, End: {end_date}"
+    )
+
+    # Récupération des données avec filtres
+    dream_type_stats = get_dream_type_stats_filtered(
+        request.user, period, start_date, end_date
+    )
+    dream_type_timeline = get_dream_type_timeline_filtered(
+        request.user, period, start_date, end_date
+    )
+    emotions_stats = get_emotions_stats_filtered(
+        request.user, period, start_date, end_date
+    )
+    emotions_timeline, emotions_list = get_emotions_timeline_filtered(
+        request.user, period, start_date, end_date
+    )
 
     # Formatage des émotions avec les labels français
     formatted_emotions_stats = {}
@@ -223,6 +243,9 @@ def dream_followup(request):
             }
         )
 
+    # Calcul de la plage de dates pour l'affichage
+    date_range_info = get_date_range_display(period, start_date, end_date)
+
     context = {
         'dream_type_stats': dream_type_stats,
         'dream_type_timeline': dream_type_timeline,
@@ -230,6 +253,33 @@ def dream_followup(request):
         'emotions_timeline': emotions_timeline,
         'emotions_list': formatted_emotions_list,
         'has_data': dream_type_stats['total'] > 0,
+        'current_period': period,
+        'current_start_date': start_date,
+        'current_end_date': end_date,
+        'date_range_display': date_range_info,
     }
 
     return render(request, 'diary/dream_followup.html', context)
+
+
+def get_date_range_display(period, start_date=None, end_date=None):
+    """Retourne une description lisible de la période sélectionnée"""
+    if start_date and end_date:
+        try:
+            start = datetime.strptime(start_date, '%Y-%m-%d').strftime(
+                '%d/%m/%Y'
+            )
+            end = datetime.strptime(end_date, '%Y-%m-%d').strftime('%d/%m/%Y')
+            return f"Du {start} au {end}"
+        except ValueError:
+            return "Période personnalisée"
+
+    period_labels = {
+        'month': 'Les 30 derniers jours',
+        '3months': 'Les 3 derniers mois',
+        '6months': 'Les 6 derniers mois',
+        '1year': 'La dernière année',
+        'all': 'Toutes les données',
+    }
+
+    return period_labels.get(period, 'Toutes les données')
