@@ -185,7 +185,7 @@
       const formData = new FormData();
       formData.append("audio", audioBlob);
 
-      const response = await fetch("/diary/analyse_from_voice_stream/", {
+      const response = await fetch("/diary/analyse_from_voice/", {
         method: "POST",
         body: formData,
       });
