@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 import logging
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
@@ -195,6 +195,81 @@ def analyse_from_voice(request):
     return JsonResponse(
         {'success': False, 'error': 'Pas de fichier audio transmis'}
     )
+
+
+# ===== NOUVELLE FONCTION SSE =====
+@require_http_methods(["POST"])
+@login_required
+@csrf_exempt
+def analyse_from_voice_stream(request):
+    """Version SSE (Server-Sent Events) de analyse_from_voice pour affichage progressif des éléments"""
+    
+    def event_stream():
+        try:
+            if 'audio' not in request.FILES:
+                yield f"data: {json.dumps({'step': 'error', 'message': 'Pas de fichier audio'})}\n\n"
+                return
+
+            audio_file = request.FILES['audio']
+            audio_data = audio_file.read()
+
+            # Transcription
+            transcription = transcribe_audio(audio_data)
+            if not transcription:
+                yield f"data: {json.dumps({'step': 'error', 'message': 'Transcription échouée'})}\n\n"
+                return
+            yield f"data: {json.dumps({'step': 'transcription', 'data': {'transcription': transcription}})}\n\n"
+
+            # Émotions
+            emotions, dominant_emotion = analyze_emotions(transcription)
+            if emotions is None:
+                yield f"data: {json.dumps({'step': 'error', 'message': 'Analyse émotions échouée'})}\n\n"
+                return
+            dream_type = classify_dream(emotions)
+            formatted_dominant_emotion = EMOTION_LABELS.get(dominant_emotion[0], dominant_emotion[0].capitalize())
+            formatted_dream_type = DREAM_TYPE_LABELS.get(dream_type, dream_type.capitalize())
+            yield f"data: {json.dumps({'step': 'emotions', 'data': {'dominant_emotion': formatted_dominant_emotion, 'dream_type': formatted_dream_type}})}\n\n"
+
+            # Sauvegarde (créer le rêve d'abord pour avoir l'ID)
+            dream = Dream.objects.create(
+                user=request.user,
+                transcription=transcription,
+                emotions=emotions,
+                dominant_emotion=dominant_emotion[0],
+                dream_type=dream_type,
+                interpretation={},  # Vide pour l'instant
+                is_analyzed=True,
+            )
+
+            # Image
+            image_success = generate_image_from_text(request.user, transcription, dream)
+            if image_success and dream.image_url:
+                yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': dream.image_url}})}\n\n"
+            else:
+                yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': None}})}\n\n"
+
+            # Interprétation
+            interpretation = interpret_dream(transcription)
+            if interpretation is None:
+                yield f"data: {json.dumps({'step': 'error', 'message': 'Interprétation échouée'})}\n\n"
+                return
+
+            # Mettre à jour le rêve avec l'interprétation
+            dream.interpretation = interpretation
+            dream.save()
+
+            # Envoyer l'interprétation
+            yield f"data: {json.dumps({'step': 'interpretation', 'data': {'interpretation': interpretation}})}\n\n"
+
+            yield f"data: {json.dumps({'step': 'complete'})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'step': 'error', 'message': 'Erreur serveur'})}\n\n"
+
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    return response
+
 
 @login_required
 def dream_followup(request):

@@ -6,6 +6,7 @@ urlpatterns = [
     path('record/', views.dream_recorder_view, name='dream_recorder'),
     path('transcribe/', views.transcribe, name='transcribe'),
     path('analyse_from_voice/', views.analyse_from_voice, name='analyse_from_voice'),
+    path('analyse_from_voice_stream/', views.analyse_from_voice_stream, name='analyse_from_voice_stream'),  # SEULE LIGNE AJOUTÉE
     path('followup/', views.dream_followup, name='dream_followup'),
     path('dream/<int:dream_id>/', views.dream_detail_view, name='dream_detail'),
 ]
