@@ -19,6 +19,7 @@ import json
 import tempfile
 
 from ..models import Dream
+from ..constants import DREAM_ERROR_MESSAGE
 
 User = get_user_model()
 
@@ -839,6 +840,53 @@ class ViewsSecurityTest(TestCase):
         # API SSE (anciennement JSON)
         response = self.client.post(reverse('analyse_from_voice'))
         self.assertEqual(response['Content-Type'], 'text/event-stream')
+
+    @patch('diary.views.transcribe_audio', return_value=None)
+    def test_sse_error_transcription_failure_sends_generic_message_only(self, _):
+        """Transcription KO → SSE ne renvoie que l'erreur générique, rien n'est créé."""
+        self.client.login(email=self.user.email, password='testpass123')
+
+        with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
+            audio_file.write(b'fake_audio_data')
+            audio_file.seek(0)
+            response = self.client.post(reverse('analyse_from_voice'), {'audio': audio_file})
+
+        # Flux SSE + contenu
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response['Content-Type'].startswith('text/event-stream'))
+        events = _sse_events_from_response(response)
+
+        # Un seul event 'error' avec le message générique
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].get('step'), 'error')
+        self.assertEqual(events[0].get('message'), DREAM_ERROR_MESSAGE)
+
+        # Aucun rêve créé
+        self.assertEqual(Dream.objects.filter(user=self.user).count(), 0)
+
+    @patch('diary.views.transcribe_audio', return_value="ok")
+    @patch('diary.views.analyze_emotions', return_value=(None, None))
+    def test_sse_error_after_transcription_shows_generic_message_and_no_creation(self, *_):
+        """Échec après la transcription (analyse émotions KO) → erreur générique et pas de création."""
+        self.client.login(email=self.user.email, password='testpass123')
+
+        with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
+            audio_file.write(b'fake_audio_data')
+            audio_file.seek(0)
+            response = self.client.post(reverse('analyse_from_voice'), {'audio': audio_file})
+
+        events = _sse_events_from_response(response)
+
+        # On a bien une erreur générique dans le flux
+        err = [e for e in events if e.get('step') == 'error']
+        self.assertEqual(len(err), 1)
+        self.assertEqual(err[0].get('message'), DREAM_ERROR_MESSAGE)
+
+        # Pas d'interprétation ni de 'complete'
+        self.assertFalse(any(e.get('step') in ('interpretation', 'complete') for e in events))
+
+        # Aucun rêve créé
+        self.assertEqual(Dream.objects.filter(user=self.user).count(), 0)
 
 
 """

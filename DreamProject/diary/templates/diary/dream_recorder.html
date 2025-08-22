@@ -33,7 +33,7 @@
 </div>
 
 <!-- Messages de statut temporaires -->
-<div id="status" class="text-center text-sm sm:text-base md:text-lg text-gray-700 mb-6 hidden font-normal"></div>
+<div id="status" class="text-center text-sm sm:text-base md:text-lg text-gray-700 hidden font-normal"></div>
 
 <!-- Bloc 1 : Transcription de l'audio (s'affiche en premier) -->
 <div class="mb-6 hidden pastel-yellow" id="sectionTranscription">
@@ -88,6 +88,10 @@
   let isRecording = false;
   let startTime;
   let timerInterval;
+
+  // Suivi du flux SSE (succès/erreur)
+  let hadError = false;      // si une étape modèle échoue
+  let sawComplete = false;   // si on a reçu l’event 'complete'
 
   // ===== RÉFÉRENCES DOM =====
   // Éléments de contrôle de l'enregistrement
@@ -151,6 +155,7 @@
       timerInterval = setInterval(updateTimer, 1000);
       
     } catch (err) {
+      // Erreur micro = hors échec modèle → on peut afficher un message spécifique
       showStatus("Erreur: Impossible d'accéder au microphone");
     }
   }
@@ -218,12 +223,17 @@
 
     } catch (error) {
       console.error('Erreur SSE:', error);
-      showStatus("{{ DREAM_ERROR_MESSAGE|escapejs }}");
+      handleModelFailure("{{ DREAM_ERROR_MESSAGE|escapejs }}");
     } finally {
-      // Masquer les éléments de processing + titre à la fin de l'analyse vocale
+      // Fin de traitement : arrêter les spinners
       recordBtn.classList.remove("processing");
       loadingIcon.classList.add("hidden");
       micIcon.classList.remove("hidden");
+
+      // Si erreur déjà gérée : ne rien faire, on laisse le reload se produire
+      if (hadError) return;
+
+      // Succès : masquer le bouton et le titre, afficher une éventuelle navigation
       recordBtn.style.display = "none";
       const title = document.querySelector("h1");
       if (title) title.style.display = "none";
@@ -242,7 +252,7 @@
         break;
       
       case 'emotions':
-        // ←←← MODIF : supporte string OU liste
+        // ←←← supporte string OU liste
         const dom = data.data.dominant_emotion;
         emotionDominante.textContent = Array.isArray(dom) ? dom.join(", ") : dom;
         dreamType.textContent = data.data.dream_type;
@@ -288,19 +298,57 @@
         imageRevee.appendChild(img);
         sectionImage.style.display = "block";
         break;
+
+      case 'complete':
+        sawComplete = true; // succès confirmé
+        break;
       
       case 'error':
-        showStatus(data.message);
+        // Un seul message générique + masquage total + reload
+        handleModelFailure(data.message || "{{ DREAM_ERROR_MESSAGE|escapejs }}");
         break;
     }
+  }
+
+  // ===== GESTION D'ÉCHEC MODÈLE (unique UI) =====
+  function handleModelFailure(message) {
+    hadError = true;
+
+    // Afficher uniquement le message générique
+    showStatus(message);
+
+    // Cacher absolument tout le reste
+    recordBtn.style.display = "none";
+    const title = document.querySelector("h1");
+    if (title) title.style.display = "none";
+    sectionTranscription.style.display = "none";
+    sectionEmotionDream.style.display = "none";
+    sectionInterpretation.style.display = "none";
+    sectionImage.style.display = "none";
+    sectionDisclaimer.classList.add("hidden");
+    const nav = document.getElementById("sectionNavigation");
+    if (nav) nav.style.display = "none";
+
+    // Stop états visuels
+    recordBtn.classList.remove("processing");
+    loadingIcon.classList.add("hidden");
+    micIcon.classList.remove("hidden");
+
+    // Rechargement automatique après quelques secondes
+    setTimeout(() => {
+      window.location.reload();
+    }, 3500);
   }
 
   // ===== FONCTIONS UTILITAIRES =====
   function showStatus(message) {
     status.textContent = message;
     status.style.display = "block";
+    // On ne cache pas ici si c'est une erreur modèle : la page va recharger
     setTimeout(() => {
-      status.style.display = "none";
+      if (!hadError) {
+        status.style.display = "none";
+      }
     }, 5000);
   }
 

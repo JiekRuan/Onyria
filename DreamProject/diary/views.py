@@ -157,6 +157,7 @@ def analyse_from_voice(request):
     
     def event_stream():
         start_time = time.time()
+        dream = None  # suivi du rêve provisoire pour pouvoir le supprimer en cas d'échec critique
         try:
             if 'audio' not in request.FILES:
                 logger.error("Analyse SSE: aucun fichier audio reçu")
@@ -207,7 +208,7 @@ def analyse_from_voice(request):
             )
             logger.debug(f"Rêve {dream.id} créé")
 
-            # Image
+            # Image (optionnelle)
             image_success = generate_image_from_text(request.user, transcription, dream)
             if image_success and dream.image_url:
                 yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': dream.image_url}})}\n\n"
@@ -218,6 +219,12 @@ def analyse_from_voice(request):
             interpretation = interpret_dream(transcription)
             if interpretation is None:
                 logger.error("Analyse SSE: échec interprétation")
+                # En cas d'échec critique, ne conserver AUCUN rêve
+                try:
+                    if dream is not None:
+                        dream.delete()
+                except Exception:
+                    pass
                 yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
 
@@ -239,6 +246,12 @@ def analyse_from_voice(request):
         except Exception as e:
             duration = time.time() - start_time if 'start_time' in locals() else 0
             logger.error(f"Erreur analyse SSE user {request.user.id} après {duration:.2f}s: {e}")
+            # Sécurité : si un rêve provisoire existe, le supprimer pour ne rien laisser en cas d'échec global
+            try:
+                if 'dream' in locals() and dream is not None:
+                    dream.delete()
+            except Exception:
+                pass
             yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
 
     response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
