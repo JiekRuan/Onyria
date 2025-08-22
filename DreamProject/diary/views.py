@@ -31,6 +31,21 @@ def dream_analysis_error():
     return JsonResponse({'success': False, 'error': DREAM_ERROR_MESSAGE})
 
 
+# ---------- Normalisation labels : garantit une CHAÎNE ----------
+def _as_str_label(val):
+    """
+    Garantit un string pour les labels envoyés au frontend/tests.
+    - Si liste/tuple -> prend le 1er élément
+    - Sinon -> cast en string si besoin
+    """
+    if isinstance(val, (list, tuple)):
+        if not val:
+            return ""
+        val = val[0]
+    return val if isinstance(val, str) else str(val)
+# ---------------------------------------------------------------
+
+
 # ----- Vues principales ----- #
 
 
@@ -75,7 +90,7 @@ def dream_detail_view(request, dream_id):
             dream.dominant_emotion, dream.dominant_emotion.capitalize()
         )
         formatted_dream_type = DREAM_TYPE_LABELS.get(
-            dream.dream_type, dream.dream_type.capitalize()
+        dream.dream_type, dream.dream_type.capitalize()
         )
     else:
         formatted_dominant_emotion = "Non analysé"
@@ -167,8 +182,17 @@ def analyse_from_voice(request):
                 yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
             dream_type = classify_dream(emotions)
-            formatted_dominant_emotion = EMOTION_LABELS.get(dominant_emotion[0], dominant_emotion[0].capitalize())
+
+            # format "clé brute" (ex: 'joie', 'rêve') -> labels FR
+            raw_dominant_key = dominant_emotion[0] if isinstance(dominant_emotion, (list, tuple)) else dominant_emotion
+            formatted_dominant_emotion = EMOTION_LABELS.get(raw_dominant_key, str(raw_dominant_key).capitalize())
             formatted_dream_type = DREAM_TYPE_LABELS.get(dream_type, dream_type.capitalize())
+
+            # Normalisation stricte : CHAÎNE (string)
+            formatted_dominant_emotion = _as_str_label(formatted_dominant_emotion)
+            formatted_dream_type = _as_str_label(formatted_dream_type)
+
+            # Contrat SSE : renvoyer des strings (ex: 'Joie', 'Rêve')
             yield f"data: {json.dumps({'step': 'emotions', 'data': {'dominant_emotion': formatted_dominant_emotion, 'dream_type': formatted_dream_type}})}\n\n"
 
             # Sauvegarde (créer le rêve d'abord pour avoir l'ID)
@@ -176,7 +200,7 @@ def analyse_from_voice(request):
                 user=request.user,
                 transcription=transcription,
                 emotions=emotions,
-                dominant_emotion=dominant_emotion[0],
+                dominant_emotion=raw_dominant_key,
                 dream_type=dream_type,
                 interpretation={},  # Vide pour l'instant
                 is_analyzed=True,
@@ -205,12 +229,12 @@ def analyse_from_voice(request):
             yield f"data: {json.dumps({'step': 'interpretation', 'data': {'interpretation': interpretation}})}\n\n"
 
             total_duration = time.time() - start_time
-            # Alerte sur analyse lente
             if total_duration > 15:
                 logger.warning(f"Analyse SSE lente: {total_duration:.2f}s pour user {request.user.id}")
             
-            logger.info(f"Analyse SSE user {request.user.id} réussie - Type: {dream_type}, Émotion: {dominant_emotion[0]} en {total_duration:.2f}s")
-            yield f"data: {json.dumps({'step': 'complete'})}\n\n"
+            logger.info(f"Analyse SSE user {request.user.id} réussie - Type: {dream_type}, Émotion: {raw_dominant_key} en {total_duration:.2f}s")
+            # Succès explicite pour les tests (image peut échouer sans bloquer)
+            yield f"data: {json.dumps({'step': 'complete', 'success': True})}\n\n"
 
         except Exception as e:
             duration = time.time() - start_time if 'start_time' in locals() else 0

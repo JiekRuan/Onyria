@@ -23,6 +23,26 @@ from ..utils import softmax, get_profil_onirique_stats
 User = get_user_model()
 
 
+# === Utilitaire local pour lire les événements SSE ===
+def _collect_sse_events(response):
+    """
+    Lit un StreamingHttpResponse SSE et renvoie une liste d'events (dict).
+    Chaque event doit arriver sous la forme:  data: {...}\n\n
+    """
+    events = []
+    for chunk in response.streaming_content:
+        try:
+            line = chunk.decode("utf-8").strip()
+            if not line.startswith("data:"):
+                continue
+            payload = line[len("data:"):].strip()
+            events.append(json.loads(payload))
+        except Exception:
+            # On ignore les lignes non conformes/vides
+            continue
+    return events
+
+
 class CoreModelTest(TestCase):
     """
     Tests essentiels du modèle Dream.
@@ -298,7 +318,7 @@ class CoreWorkflowTest(TestCase):
     def test_complete_analysis_workflow_core(self, mock_generate, mock_interpret, 
                                            mock_classify, mock_analyze, mock_transcribe):
         """
-        Test critique : Workflow d'analyse complet.
+        Test critique : Workflow d'analyse complet (version SSE).
         
         Le test le plus important de l'application.
         Vérifie que l'analyse fonctionne de bout en bout.
@@ -326,24 +346,46 @@ class CoreWorkflowTest(TestCase):
                 'audio': audio_file
             })
         
-        # Vérifications critiques
+        # Vérifications: réponse SSE
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.content)
-        
-        self.assertTrue(data['success'])
-        self.assertEqual(data['transcription'], "J'ai rêvé d'un oiseau bleu")
-        self.assertEqual(data['dominant_emotion'], ['Joie'])
-        self.assertEqual(data['dream_type'], 'Rêve')
-        self.assertIn('interpretation', data)
-        
-        # Vérifier qu'un rêve a été créé
+        self.assertEqual(response['Content-Type'], 'text/event-stream')
+
+        # Consommer le flux SSE
+        events = _collect_sse_events(response)
+
+        # On doit avoir au moins: transcription -> emotions -> image -> interpretation -> complete
+        steps = [e.get('step') for e in events]
+        self.assertIn('transcription', steps)
+        self.assertIn('emotions', steps)
+        self.assertIn('interpretation', steps)
+        self.assertIn('complete', steps)
+
+        # Vérif contenu de transcription
+        trans_evt = next(e for e in events if e.get('step') == 'transcription')
+        self.assertIn('transcription', trans_evt['data'])
+        self.assertEqual(trans_evt['data']['transcription'], "J'ai rêvé d'un oiseau bleu")
+
+        # Vérif contenu d'émotions (formaté côté vue)
+        emo_evt = next(e for e in events if e.get('step') == 'emotions')
+        self.assertIn('dominant_emotion', emo_evt['data'])
+        self.assertIn('dream_type', emo_evt['data'])
+        # La vue renvoie une **chaîne** pour l'émotion formatée, pas une liste
+        self.assertEqual(emo_evt['data']['dominant_emotion'], 'Joie')
+        self.assertEqual(emo_evt['data']['dream_type'], 'Rêve')
+
+        # Vérif interprétation (dict validé)
+        interp_evt = next(e for e in events if e.get('step') == 'interpretation')
+        self.assertIn('interpretation', interp_evt['data'])
+        self.assertIsInstance(interp_evt['data']['interpretation'], dict)
+
+        # Vérifier qu'un rêve a été créé et marqué analysé
         dream = Dream.objects.get(user=self.user)
         self.assertTrue(dream.is_analyzed)
         self.assertEqual(dream.transcription, "J'ai rêvé d'un oiseau bleu")
 
     def test_analysis_error_handling_core(self):
         """
-        Test critique : Gestion d'erreur dans l'analyse.
+        Test critique : Gestion d'erreur dans l'analyse (version SSE).
         
         L'application doit gérer gracieusement les erreurs d'IA.
         """
@@ -358,10 +400,14 @@ class CoreWorkflowTest(TestCase):
                     'audio': audio_file
                 })
             
-            data = json.loads(response.content)
-            self.assertFalse(data['success'])
-            self.assertIn('error', data)
-            
+            # C'est un flux SSE qui doit contenir un event 'error'
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response['Content-Type'], 'text/event-stream')
+
+            events = _collect_sse_events(response)
+            steps = [e.get('step') for e in events]
+            self.assertIn('error', steps)
+
             # Aucun rêve ne doit être créé
             self.assertEqual(Dream.objects.filter(user=self.user).count(), 0)
 

@@ -242,7 +242,9 @@
         break;
       
       case 'emotions':
-        emotionDominante.textContent = data.data.dominant_emotion;
+        // ←←← MODIF : supporte string OU liste
+        const dom = data.data.dominant_emotion;
+        emotionDominante.textContent = Array.isArray(dom) ? dom.join(", ") : dom;
         dreamType.textContent = data.data.dream_type;
         sectionEmotionDream.style.display = "flex";
         break;

@@ -261,10 +261,36 @@ def analyze_emotions(text):
         return None, None
 
     try:
-        raw_scores = json.loads(response.choices[0].message.content)
-        scores = softmax(raw_scores)
+        # Contrôle de format robuste
+        raw = json.loads(response.choices[0].message.content)
+
+        # Certains modèles peuvent renvoyer une liste de paires; on la convertit en dict si possible
+        if isinstance(raw, list):
+            try:
+                raw = dict(raw)
+            except Exception:
+                logger.error(f"Format inattendu des émotions (liste non convertible): {raw}")
+                return None, None
+
+        if not isinstance(raw, dict):
+            logger.error(f"Format inattendu des émotions (type={type(raw)})")
+            return None, None
+
+        # Cast des valeurs non numériques
+        cleaned = {}
+        for k, v in raw.items():
+            try:
+                cleaned[k] = float(v)
+            except (TypeError, ValueError):
+                logger.warning(f"Score non numérique ignoré pour {k}: {v}")
+
+        if not cleaned:
+            logger.error("Aucun score exploitable reçu")
+            return None, None
+
+        scores = softmax(cleaned)
         dominant = max(scores.items(), key=lambda x: x[1])
-        
+
         logger.info(f"Émotion dominante: {dominant[0]} ({dominant[1]:.2f})")
         logger.debug(f"Scores détaillés: {json.dumps(scores, indent=2)}")
         
@@ -471,12 +497,6 @@ def get_profil_onirique_stats(user):
 
 
 # ---------- DASHBOARD PERSONNEL ----------
-# ----------- Suivi du type de reve --------
-
-# Ajouts à faire dans utils.py
-
-from datetime import datetime, timedelta
-from django.utils import timezone
 
 
 def get_date_filter_queryset(
