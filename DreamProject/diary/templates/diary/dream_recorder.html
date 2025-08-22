@@ -8,18 +8,18 @@
 <!-- Titre -->
 <h1 class="text-3xl text-center text-black mb-8">Raconte ton rêve à voix haute</h1>
 
-<!-- Bouton d'enregistrement -->
+<!-- Bouton d'enregistrement avec 3 états visuels -->
 <div class="flex justify-center">
   <button id="recordBtn" class="btn-ballon-record">
-    <!-- Icône micro -->
+    <!-- Icône micro (état initial) -->
     <svg id="micIcon" class="w-8 h-8 text-[#4e3f86]" fill="currentColor" viewBox="0 0 20 20">
       <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
     </svg>
-    <!-- Icône stop -->
+    <!-- Icône stop (pendant enregistrement) -->
     <svg id="stopIcon" class="w-6 h-6 text-[#4e3f86] hidden" fill="currentColor" viewBox="0 0 24 24">
       <rect x="6" y="6" width="12" height="12" rx="2"></rect>
     </svg>
-    <!-- Icône loading -->
+    <!-- Icône loading (pendant traitement) -->
     <svg id="loadingIcon" class="w-8 h-8 text-[#4e3f86] hidden animate-spin" fill="none" viewBox="0 0 24 24">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
       <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -27,15 +27,15 @@
   </button>
 </div>
 
-<!-- Timer -->
+<!-- Timer visible pendant l'enregistrement -->
 <div id="timer" class="text-center text-gray-600 mt-4 hidden text-xs sm:text-sm md:text-base font-normal">
   Temps : <span id="timerText" class="font-mono">00:00</span>
 </div>
 
-<!-- Statut -->
-<div id="status" class="text-center text-sm sm:text-base md:text-lg text-gray-700 mb-6 hidden font-normal"></div>
+<!-- Messages de statut temporaires -->
+<div id="status" class="text-center text-sm sm:text-base md:text-lg text-gray-700 hidden font-normal"></div>
 
-<!-- Bloc transcription -->
+<!-- Bloc 1 : Transcription de l'audio (s'affiche en premier) -->
 <div class="mb-6 hidden pastel-yellow" id="sectionTranscription">
   <h2 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Transcription</h2>
   <div id="transcriptionText" class="text-xs sm:text-sm md:text-base font-normal leading-relaxed">
@@ -43,7 +43,7 @@
   </div>
 </div>
 
-<!-- Bloc émotion + type de rêve côte à côte -->
+<!-- Bloc 2 : Analyse émotionnelle (s'affiche en deuxième) -->
 <div class="mb-6 hidden flex gap-4" id="sectionEmotionDream">
   <div class="pastel-baby-powder w-1/2">
     <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Émotion dominante</h3>
@@ -55,18 +55,18 @@
   </div>
 </div>
 
-<!-- Bloc image générée -->
+<!-- Bloc 3 : Image générée par IA (s'affiche en troisième) -->
 <div id="sectionImage" class="hidden mb-6">
   <div id="imageRevee" class="flex justify-center"></div>
 </div>
 
-<!-- Bloc interprétation -->
+<!-- Bloc 4 : Interprétation détaillée (s'affiche en dernier) -->
 <div class="hidden pastel-champagne mb-6" id="sectionInterpretation">
   <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-2">Interprétation</h3>
   <div id="interpretation" class="text-xs sm:text-sm md:text-base font-normal leading-relaxed space-y-4 text-left"></div>
 </div>
 
-<!-- Avertissement -->
+<!-- Avertissement légal -->
 <div id="sectionDisclaimer" class="hidden mt-3">
   <details class="ai-disclaimer">
     <summary class="ai-disclaimer__summary flex items-center gap-2">
@@ -76,41 +76,53 @@
     <div class="ai-disclaimer__content">
       <p>Les interprétations qui vous sont présentées sont générées par une intelligence artificielle et tirent leurs sources d'origines diverses. Elles visent avant tout à éveiller votre curiosité et à nourrir votre exploration personnelle du monde des rêves.</p>
       <p class="mt-1">Ces suggestions peuvent comporter des imprécisions ou des approximations : elles ne doivent en aucun cas être considérées comme des conseils médicaux, psychologiques ou thérapeutiques.</p>
-      <p class="mt-1">Si un rêve vous questionne profondément ou suscite une émotion persistante, n’hésitez pas à en parler avec un professionnel qualifié.</p>
+      <p class="mt-1">Si un rêve vous questionne profondément ou suscite une émotion persistante, n'hésitez pas à en parler avec un professionnel qualifié.</p>
     </div>
   </details>
 </div>
 
 <script>
+  // ===== VARIABLES D'ÉTAT =====
   let mediaRecorder;
   let audioChunks = [];
   let isRecording = false;
   let startTime;
   let timerInterval;
 
+  // Suivi du flux SSE (succès/erreur)
+  let hadError = false;      // si une étape modèle échoue
+  let sawComplete = false;   // si on a reçu l’event 'complete'
+
+  // ===== RÉFÉRENCES DOM =====
+  // Éléments de contrôle de l'enregistrement
   const recordBtn = document.getElementById("recordBtn");
   const timer = document.getElementById("timer");
   const timerText = document.getElementById("timerText");
   const status = document.getElementById("status");
 
+  // Éléments où injecter les résultats de l'analyse
   const transcriptionText = document.getElementById("transcriptionText");
   const emotionDominante = document.getElementById("emotionDominante");
   const dreamType = document.getElementById("dreamType");
   const interpretation = document.getElementById("interpretation");
   const imageRevee = document.getElementById("imageRevee");
 
+  // Sections complètes à afficher/masquer progressivement
   const sectionTranscription = document.getElementById("sectionTranscription");
   const sectionEmotionDream = document.getElementById("sectionEmotionDream");
   const sectionInterpretation = document.getElementById("sectionInterpretation");
   const sectionImage = document.getElementById("sectionImage");
   const sectionDisclaimer = document.getElementById("sectionDisclaimer");
 
+  // Icônes du bouton pour les différents états
   const micIcon = document.getElementById("micIcon");
   const stopIcon = document.getElementById("stopIcon");
   const loadingIcon = document.getElementById("loadingIcon");
 
+  // ===== INITIALISATION =====
   recordBtn.addEventListener("click", toggleRecording);
 
+  // ===== GESTION DE L'ENREGISTREMENT =====
   async function toggleRecording() {
     if (!isRecording) {
       await startRecording();
@@ -141,7 +153,9 @@
       timer.style.display = "block";
       startTime = Date.now();
       timerInterval = setInterval(updateTimer, 1000);
+      
     } catch (err) {
+      // Erreur micro = hors échec modèle → on peut afficher un message spécifique
       showStatus("Erreur: Impossible d'accéder au microphone");
     }
   }
@@ -169,6 +183,7 @@
     timerText.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   }
 
+  // ===== TRAITEMENT VIA SERVER-SENT EVENTS =====
   async function processRecording() {
     try {
       const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
@@ -180,27 +195,81 @@
         body: formData,
       });
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      if (result.success) {
-        transcriptionText.textContent = result.transcription;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              handleStreamEvent(data);
+            } catch (e) {
+              console.error('Erreur parsing SSE:', e);
+            }
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('Erreur SSE:', error);
+      handleModelFailure("{{ DREAM_ERROR_MESSAGE|escapejs }}");
+    } finally {
+      // Fin de traitement : arrêter les spinners
+      recordBtn.classList.remove("processing");
+      loadingIcon.classList.add("hidden");
+      micIcon.classList.remove("hidden");
+
+      // Si erreur déjà gérée : ne rien faire, on laisse le reload se produire
+      if (hadError) return;
+
+      // Succès : masquer le bouton et le titre, afficher une éventuelle navigation
+      recordBtn.style.display = "none";
+      const title = document.querySelector("h1");
+      if (title) title.style.display = "none";
+      
+      const nav = document.getElementById("sectionNavigation");
+      if (nav) nav.style.display = "flex";
+    }
+  }
+
+  // ===== GESTION DES ÉVÉNEMENTS SSE =====
+  function handleStreamEvent(data) {
+    switch (data.step) {
+      case 'transcription':
+        transcriptionText.textContent = data.data.transcription;
         sectionTranscription.style.display = "block";
-
-        emotionDominante.textContent = result.dominant_emotion[0];
-        dreamType.textContent = result.dream_type;
+        break;
+      
+      case 'emotions':
+        // ←←← supporte string OU liste
+        const dom = data.data.dominant_emotion;
+        emotionDominante.textContent = Array.isArray(dom) ? dom.join(", ") : dom;
+        dreamType.textContent = data.data.dream_type;
         sectionEmotionDream.style.display = "flex";
-
+        break;
+      
+      case 'interpretation':
         interpretation.innerHTML = "";
-
-        // Gestion robuste de l'interprétation - compatible avec tous les formats
-        for (const [key, val] of Object.entries(result.interpretation)) {
+        
+        for (const [key, val] of Object.entries(data.data.interpretation)) {
           const p = document.createElement("p");
           p.className = "text-left text-xs sm:text-sm md:text-base font-normal mb-4";
           const strong = document.createElement("strong");
           strong.textContent = capitalize(key);
           p.appendChild(strong);
           
-          // Extraction robuste du contenu
+          // Extraction robuste du contenu (gestion formats variables)
           let content;
           if (typeof val === 'string') {
             content = val;
@@ -214,41 +283,72 @@
           p.appendChild(document.createTextNode(` : ${content}`));
           interpretation.appendChild(p);
         }
-
+        
         sectionInterpretation.style.display = "block";
-        sectionDisclaimer.classList.remove("hidden"); // affiche l'avertissement sous la carte
-
-        const imagePath = result.image_path || "{% static 'img/placeholder.png' %}";
+        sectionDisclaimer.classList.remove("hidden");
+        break;
+      
+      case 'image':
+        const imagePath = data.data.image_path || "{% static 'img/placeholder.png' %}";
         imageRevee.innerHTML = "";
         const img = document.createElement("img");
         img.src = imagePath;
         img.alt = "Image du rêve";
         img.className = "pastel-image w-full aspect-[4/3] object-cover mx-auto";
         imageRevee.appendChild(img);
-
         sectionImage.style.display = "block";
+        break;
 
-      } else {
-        showStatus("Erreur : " + result.error);
-      }
-
-    } catch (err) {
-      showStatus("Erreur: " + err.message);
+      case 'complete':
+        sawComplete = true; // succès confirmé
+        break;
+      
+      case 'error':
+        // Un seul message générique + masquage total + reload
+        handleModelFailure(data.message || "{{ DREAM_ERROR_MESSAGE|escapejs }}");
+        break;
     }
+  }
 
+  // ===== GESTION D'ÉCHEC MODÈLE (unique UI) =====
+  function handleModelFailure(message) {
+    hadError = true;
+
+    // Afficher uniquement le message générique
+    showStatus(message);
+
+    // Cacher absolument tout le reste
+    recordBtn.style.display = "none";
+    const title = document.querySelector("h1");
+    if (title) title.style.display = "none";
+    sectionTranscription.style.display = "none";
+    sectionEmotionDream.style.display = "none";
+    sectionInterpretation.style.display = "none";
+    sectionImage.style.display = "none";
+    sectionDisclaimer.classList.add("hidden");
+    const nav = document.getElementById("sectionNavigation");
+    if (nav) nav.style.display = "none";
+
+    // Stop états visuels
     recordBtn.classList.remove("processing");
     loadingIcon.classList.add("hidden");
     micIcon.classList.remove("hidden");
-    recordBtn.style.display = "none";
-    const nav = document.getElementById("sectionNavigation");
-    if (nav) nav.style.display = "flex";
+
+    // Rechargement automatique après quelques secondes
+    setTimeout(() => {
+      window.location.reload();
+    }, 3500);
   }
 
+  // ===== FONCTIONS UTILITAIRES =====
   function showStatus(message) {
     status.textContent = message;
     status.style.display = "block";
+    // On ne cache pas ici si c'est une erreur modèle : la page va recharger
     setTimeout(() => {
-      status.style.display = "none";
+      if (!hadError) {
+        status.style.display = "none";
+      }
     }, 5000);
   }
 
