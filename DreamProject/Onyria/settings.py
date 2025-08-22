@@ -133,27 +133,47 @@ AUTH_USER_MODEL = 'accounts.CustomUser'  # Modèle personnalisé
 LOGIN_REDIRECT_URL = '/diary/record/'
 LOGOUT_REDIRECT_URL = 'login'
 
+# LOGGING CONFIGURATION
+# Adapte automatiquement le niveau selon l'environnement :
+# - Développement (DEBUG=True) : logs DEBUG pour diagnostic détaillé
+# - Production (DEBUG=False) : logs INFO+ pour monitoring essentiel
+
+LOG_LEVEL = 'DEBUG' if DEBUG else 'INFO'
+
 LOGGING = {
-   'version': 1,
-   'disable_existing_loggers': False,
-   'formatters': {
-       'verbose': {
-           'format': '{levelname} {asctime} {module} {message}',
-           'style': '{',
-       },
-   },
-   'handlers': {
-       'console': {
-           'level': 'INFO',
-           'class': 'logging.StreamHandler',
-           'formatter': 'verbose',
-       },
-   },
-   'loggers': {
-       'diary': {
-           'handlers': ['console'],
-           'level': 'INFO',
-           'propagate': False,
-       },
-   },
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': LOG_LEVEL,  # S'adapte selon DEBUG
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'diary': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,  # S'adapte selon DEBUG
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
 }

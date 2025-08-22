@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import datetime
 import logging
 from django.shortcuts import render, get_object_or_404
@@ -114,16 +115,21 @@ def transcribe(request):
         try:
             audio_file = request.FILES['audio']
             audio_data = audio_file.read()
+            logger.info(f"Transcription simple demandée - {len(audio_data)} bytes")
+            
             transcription = transcribe_audio(audio_data)
             if transcription:
+                logger.info(f"Transcription simple réussie - {len(transcription)} caractères")
                 return JsonResponse(
                     {'success': True, 'transcription': transcription}
                 )
             else:
+                logger.error("Échec transcription simple")
                 return JsonResponse(
                     {'success': False, 'error': 'Échec de la transcription'}
                 )
         except Exception as e:
+            logger.error(f"Erreur transcription simple: {e}")
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Pas de fichier audio'})
 
@@ -136,6 +142,8 @@ def analyse_from_voice(request):
         try:
             audio_file = request.FILES['audio']
             audio_data = audio_file.read()
+            logger.info(f"Analyse rêve user {request.user.id} démarrée - {len(audio_data)} bytes")
+            start_time = time.time()
 
             # Étape 1: Transcription
             transcription = transcribe_audio(audio_data)
@@ -179,6 +187,13 @@ def analyse_from_voice(request):
                 dream_type, dream_type.capitalize()
             )
 
+            total_duration = time.time() - start_time
+            # Alerte sur analyse lente
+            if total_duration > 15:
+                logger.warning(f"Analyse complète lente: {total_duration:.2f}s pour user {request.user.id}")
+            
+            logger.info(f"Analyse rêve user {request.user.id} réussie - Type: {dream_type}, Émotion: {dominant_emotion[0]} en {total_duration:.2f}s")
+
             return JsonResponse(
                 {
                     "success": True,
@@ -192,6 +207,8 @@ def analyse_from_voice(request):
             )
 
         except Exception as e:
+            duration = time.time() - start_time if 'start_time' in locals() else 0
+            logger.error(f"Erreur analyse rêve user {request.user.id} après {duration:.2f}s: {e}")
             return dream_analysis_error()
 
     return JsonResponse(
@@ -207,19 +224,21 @@ def analyse_from_voice_stream(request):
     """Version SSE (Server-Sent Events) de analyse_from_voice pour affichage progressif des éléments"""
     
     def event_stream():
+        start_time = time.time()
         try:
             if 'audio' not in request.FILES:
-                logger.error("Aucun fichier audio reçu dans la requête")
+                logger.error("Analyse SSE: aucun fichier audio reçu")
                 yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
 
             audio_file = request.FILES['audio']
             audio_data = audio_file.read()
+            logger.info(f"Analyse SSE user {request.user.id} démarrée - {len(audio_data)} bytes")
 
             # Transcription
             transcription = transcribe_audio(audio_data)
             if not transcription:
-                logger.error("Échec de la transcription audio")
+                logger.error("Analyse SSE: échec transcription")
                 yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
             yield f"data: {json.dumps({'step': 'transcription', 'data': {'transcription': transcription}})}\n\n"
@@ -227,7 +246,7 @@ def analyse_from_voice_stream(request):
             # Émotions
             emotions, dominant_emotion = analyze_emotions(transcription)
             if emotions is None:
-                logger.error("Échec de l'analyse émotionnelle")
+                logger.error("Analyse SSE: échec analyse émotionnelle")
                 yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
             dream_type = classify_dream(emotions)
@@ -245,6 +264,7 @@ def analyse_from_voice_stream(request):
                 interpretation={},  # Vide pour l'instant
                 is_analyzed=True,
             )
+            logger.debug(f"Rêve {dream.id} créé")
 
             # Image
             image_success = generate_image_from_text(request.user, transcription, dream)
@@ -256,7 +276,7 @@ def analyse_from_voice_stream(request):
             # Interprétation
             interpretation = interpret_dream(transcription)
             if interpretation is None:
-                logger.error("Échec de l'interprétation du rêve")
+                logger.error("Analyse SSE: échec interprétation")
                 yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
 
@@ -267,10 +287,17 @@ def analyse_from_voice_stream(request):
             # Envoyer l'interprétation
             yield f"data: {json.dumps({'step': 'interpretation', 'data': {'interpretation': interpretation}})}\n\n"
 
+            total_duration = time.time() - start_time
+            # Alerte sur analyse lente
+            if total_duration > 15:
+                logger.warning(f"Analyse SSE lente: {total_duration:.2f}s pour user {request.user.id}")
+            
+            logger.info(f"Analyse SSE user {request.user.id} réussie - Type: {dream_type}, Émotion: {dominant_emotion[0]} en {total_duration:.2f}s")
             yield f"data: {json.dumps({'step': 'complete'})}\n\n"
 
         except Exception as e:
-            logger.error(f"Erreur dans analyse_from_voice_stream: {e}")
+            duration = time.time() - start_time if 'start_time' in locals() else 0
+            logger.error(f"Erreur analyse SSE user {request.user.id} après {duration:.2f}s: {e}")
             yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
 
     response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
@@ -287,9 +314,7 @@ def dream_followup(request):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    logger.info(
-        f"Filtres appliqués - Period: {period}, Start: {start_date}, End: {end_date}"
-    )
+    logger.info(f"Dashboard user {request.user.id} - Period: {period}")
 
     # Récupération des données avec filtres
     dream_type_stats = get_dream_type_stats_filtered(
@@ -327,6 +352,8 @@ def dream_followup(request):
 
     # Calcul de la plage de dates pour l'affichage
     date_range_info = get_date_range_display(period, start_date, end_date)
+
+    logger.debug(f"Dashboard user {request.user.id} - {dream_type_stats['total']} rêves")
 
     context = {
         'dream_type_stats': dream_type_stats,

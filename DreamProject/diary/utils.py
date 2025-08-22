@@ -1,6 +1,7 @@
 import os
 import json
 import math
+import time
 import tempfile
 import logging
 from datetime import datetime, timedelta
@@ -69,9 +70,7 @@ def validate_and_fix_interpretation(interpretation_data):
     ]
     fixed_interpretation = {}
 
-    logger.info(
-        f"Validation interprétation - Type reçu: {type(interpretation_data)}"
-    )
+    logger.debug(f"Validation interprétation - Clés reçues: {list(interpretation_data.keys())}")
 
     for key in expected_keys:
         if key in interpretation_data:
@@ -88,7 +87,6 @@ def validate_and_fix_interpretation(interpretation_data):
             # Si c'est déjà une string, la garder
             elif isinstance(value, str):
                 fixed_interpretation[key] = value
-                logger.debug(f"String directe pour {key}")
             # Sinon, convertir en string
             else:
                 fixed_interpretation[key] = str(value)
@@ -100,7 +98,7 @@ def validate_and_fix_interpretation(interpretation_data):
             fixed_interpretation[key] = "Interprétation non disponible"
             logger.warning(f"Clé manquante: {key}")
 
-    logger.info("Validation interprétation terminée avec succès")
+    logger.debug("Validation interprétation terminée avec succès")
     return fixed_interpretation
 
 
@@ -109,7 +107,8 @@ def validate_and_fix_interpretation(interpretation_data):
 
 def transcribe_audio(audio_data, language="fr"):
     """Transcrit un audio en texte avec Whisper de Groq"""
-    logger.info(f"Début transcription audio - Langue: {language}")
+    logger.info(f"Transcription audio démarrée - {len(audio_data)} bytes")
+    start_time = time.time()
 
     try:
         with tempfile.NamedTemporaryFile(
@@ -130,13 +129,21 @@ def transcribe_audio(audio_data, language="fr"):
             )
 
         os.unlink(temp_file_path)
-        logger.info(
-            f"Transcription réussie - {len(transcription.text)} caractères"
-        )
+        duration = time.time() - start_time
+        
+        # Alertes sur contenu problématique
+        if len(transcription.text) < 10:
+            logger.warning(f"Transcription très courte: {len(transcription.text)} caractères")
+        
+        if duration > 5:
+            logger.warning(f"Transcription lente: {duration:.2f}s")
+        
+        logger.info(f"Transcription réussie - {len(transcription.text)} caractères en {duration:.2f}s")
         return transcription.text
 
     except Exception as e:
-        logger.error(f"Échec transcription audio: {e}")
+        duration = time.time() - start_time
+        logger.error(f"Échec transcription après {duration:.2f}s: {e}")
         return None
 
 
@@ -155,7 +162,8 @@ def safe_mistral_call(model, messages, operation="API call"):
     Returns:
         Response de l'API ou None si tous les fallbacks échouent
     """
-    logger.info(f"[{operation}] Démarrage avec modèle: {model}")
+    logger.info(f"[{operation}] Démarrage avec {model}")
+    start_time = time.time()
 
     # Hiérarchie de fallback par modèle
     fallback_chain = {
@@ -170,28 +178,32 @@ def safe_mistral_call(model, messages, operation="API call"):
     }
 
     models_to_try = [model] + fallback_chain.get(model, [])
+    logger.debug(f"[{operation}] Chaîne de fallback: {models_to_try}")
 
     for attempt, current_model in enumerate(models_to_try):
         try:
-            logger.info(
-                f"[{operation}] Tentative {attempt + 1}: {current_model}"
-            )
-
+            attempt_start = time.time()
             response = mistral_client.chat.complete(
                 model=current_model,
                 messages=messages,
                 response_format={"type": "json_object"},
             )
+            attempt_duration = time.time() - attempt_start
 
             if attempt > 0:
-                logger.warning(
-                    f"[{operation}] Fallback réussi avec {current_model}"
-                )
+                logger.warning(f"[{operation}] Fallback utilisé: {current_model} en {attempt_duration:.2f}s")
+            else:
+                logger.info(f"[{operation}] Succès avec {current_model} en {attempt_duration:.2f}s")
+            
+            # Alerte sur performance dégradée
+            if attempt_duration > 10:
+                logger.warning(f"[{operation}] Performance dégradée: {attempt_duration:.2f}s")
 
             return response
 
         except Exception as e:
             error_msg = str(e).lower()
+            attempt_duration = time.time() - attempt_start
 
             # Erreurs qui nécessitent un fallback
             if any(
@@ -205,17 +217,21 @@ def safe_mistral_call(model, messages, operation="API call"):
                     "timeout",
                 ]
             ):
-                logger.warning(f"[{operation}] Erreur {current_model}: {e}")
+                if "quota" in error_msg:
+                    logger.warning(f"[{operation}] QUOTA ATTEINT - {current_model}")
+                elif "rate_limit" in error_msg:
+                    logger.warning(f"[{operation}] RATE LIMIT - {current_model}")
+                else:
+                    logger.warning(f"[{operation}] Erreur {current_model}: {e}")
 
                 if attempt == len(models_to_try) - 1:
-                    logger.error(f"[{operation}] Tous les fallbacks échoués")
+                    total_duration = time.time() - start_time
+                    logger.error(f"[{operation}] Tous les fallbacks échoués après {total_duration:.2f}s")
                     return None
 
                 continue
             else:
-                logger.error(
-                    f"[{operation}] Erreur critique {current_model}: {e}"
-                )
+                logger.error(f"[{operation}] Erreur critique {current_model}: {e}")
                 raise e
 
     return None
@@ -226,7 +242,7 @@ def safe_mistral_call(model, messages, operation="API call"):
 
 def analyze_emotions(text):
     """Renvoie le score des émotions + l'émotion dominante avec fallback"""
-    logger.info("Début analyse émotionnelle")
+    logger.info(f"Analyse émotionnelle démarrée - {len(text)} caractères")
 
     system_prompt = read_file("context_emotion.txt")
     messages = [
@@ -241,17 +257,17 @@ def analyze_emotions(text):
     )
 
     if response is None:
-        logger.error(
-            "Échec analyse émotionnelle - tous les modèles indisponibles"
-        )
+        logger.error("Échec analyse émotionnelle - tous les modèles indisponibles")
         return None, None
 
     try:
-        scores = softmax(json.loads(response.choices[0].message.content))
+        raw_scores = json.loads(response.choices[0].message.content)
+        scores = softmax(raw_scores)
         dominant = max(scores.items(), key=lambda x: x[1])
-        logger.info(
-            f"Émotion dominante détectée: {dominant[0]} ({dominant[1]:.2f})"
-        )
+        
+        logger.info(f"Émotion dominante: {dominant[0]} ({dominant[1]:.2f})")
+        logger.debug(f"Scores détaillés: {json.dumps(scores, indent=2)}")
+        
         return scores, dominant
 
     except (json.JSONDecodeError, KeyError) as e:
@@ -261,8 +277,6 @@ def analyze_emotions(text):
 
 def classify_dream(emotions):
     """Détermine si le rêve est un cauchemar ou non"""
-    logger.info("Classification du type de rêve")
-
     if emotions is None:
         logger.warning("Classification impossible - émotions non disponibles")
         return None
@@ -280,6 +294,7 @@ def classify_dream(emotions):
 
     classification = "cauchemar" if avg_neg > avg_pos else "rêve"
     logger.info(f"Classification: {classification}")
+    logger.debug(f"Scores - positif: {avg_pos:.2f}, négatif: {avg_neg:.2f}")
 
     return classification
 
@@ -289,7 +304,7 @@ def classify_dream(emotions):
 
 def interpret_dream(text):
     """Demande à Mistral une interprétation du rêve avec fallback et validation"""
-    logger.info("Début interprétation du rêve")
+    logger.info(f"Interprétation démarrée - {len(text)} caractères")
 
     system_prompt = read_file("context_interpretation.txt")
     messages = [
@@ -300,7 +315,7 @@ def interpret_dream(text):
     response = safe_mistral_call(
         model="mistral-large-latest",
         messages=messages,
-        operation="Interprétation de rêve",
+        operation="Interprétation",
     )
 
     if response is None:
@@ -309,7 +324,7 @@ def interpret_dream(text):
 
     try:
         raw_interpretation = json.loads(response.choices[0].message.content)
-        logger.info("Réponse IA reçue, validation en cours...")
+        logger.debug("Réponse IA reçue, validation en cours...")
 
         # Valider et corriger le format
         validated_interpretation = validate_and_fix_interpretation(
@@ -317,7 +332,7 @@ def interpret_dream(text):
         )
 
         if validated_interpretation:
-            logger.info("Interprétation générée et validée avec succès")
+            logger.info("Interprétation générée avec succès")
             return validated_interpretation
         else:
             logger.error("Échec validation interprétation")
@@ -336,7 +351,8 @@ def generate_image_from_text(user, prompt_text, dream_instance):
     Génère une image IA à partir du texte du rêve, via agent Mistral.
     Stocke l'image en base64 dans le modèle Dream.
     """
-    logger.info(f"Génération image pour rêve ID: {dream_instance.id}")
+    logger.info(f"Génération image pour rêve {dream_instance.id}")
+    start_time = time.time()
 
     try:
         system_instructions = read_file("instructions_image.txt")
@@ -375,9 +391,8 @@ def generate_image_from_text(user, prompt_text, dream_instance):
             dream_instance.set_image_from_bytes(image_bytes, format='PNG')
             dream_instance.save()
 
-            logger.info(
-                f"Image stockée en base64 pour rêve {dream_instance.id}"
-            )
+            duration = time.time() - start_time
+            logger.info(f"Image générée avec succès en {duration:.2f}s")
             return True
 
         except Exception as e:
@@ -396,7 +411,8 @@ def generate_image_from_text(user, prompt_text, dream_instance):
                 raise e
 
     except Exception as e:
-        logger.error(f"Erreur génération image: {e}")
+        duration = time.time() - start_time
+        logger.error(f"Erreur génération image après {duration:.2f}s: {e}")
         return False
 
 
@@ -405,7 +421,7 @@ def generate_image_from_text(user, prompt_text, dream_instance):
 
 def get_profil_onirique_stats(user):
     """Calcule les statistiques du profil onirique d'un utilisateur"""
-    logger.info(f"Calcul statistiques onirique pour utilisateur: {user.id}")
+    logger.info(f"Calcul profil onirique user {user.id}")
 
     dreams = Dream.objects.filter(user=user)
     total = dreams.count()
@@ -440,9 +456,7 @@ def get_profil_onirique_stats(user):
     if emotion_counts:
         emotion_dominante, count = emotion_counts.most_common(1)[0]
         emotion_percentage = round((count / total) * 100)
-        logger.info(
-            f"Profil calculé: {statut_reveuse}, émotion dominante: {emotion_dominante}"
-        )
+        logger.info(f"Profil calculé: {statut_reveuse} ({pourcentage}%), émotion: {emotion_dominante}")
     else:
         emotion_dominante = "émotion endormie"
         emotion_percentage = 0
@@ -485,7 +499,7 @@ def get_date_filter_queryset(
             start = datetime.strptime(start_date, '%Y-%m-%d').date()
             end = datetime.strptime(end_date, '%Y-%m-%d').date()
             queryset = queryset.filter(created_at__date__range=[start, end])
-            logger.info(f"Filtre personnalisé appliqué: {start} à {end}")
+            logger.debug(f"Filtre personnalisé: {start} à {end}")
             return queryset
         except ValueError:
             logger.warning(f"Dates invalides: {start_date}, {end_date}")
@@ -495,21 +509,21 @@ def get_date_filter_queryset(
     if period == 'month':
         start_date = timezone.now() - timedelta(days=30)
         queryset = queryset.filter(created_at__gte=start_date)
-        logger.info("Filtre: 30 derniers jours")
+        logger.debug("Filtre: 30 derniers jours")
     elif period == '3months':
         start_date = timezone.now() - timedelta(days=90)
         queryset = queryset.filter(created_at__gte=start_date)
-        logger.info("Filtre: 3 derniers mois")
+        logger.debug("Filtre: 3 derniers mois")
     elif period == '6months':
         start_date = timezone.now() - timedelta(days=180)
         queryset = queryset.filter(created_at__gte=start_date)
-        logger.info("Filtre: 6 derniers mois")
+        logger.debug("Filtre: 6 derniers mois")
     elif period == '1year':
         start_date = timezone.now() - timedelta(days=365)
         queryset = queryset.filter(created_at__gte=start_date)
-        logger.info("Filtre: 1 an")
+        logger.debug("Filtre: 1 an")
     else:
-        logger.info("Aucun filtre appliqué (toutes les données)")
+        logger.debug("Aucun filtre appliqué")
 
     return queryset
 
