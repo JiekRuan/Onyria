@@ -101,7 +101,9 @@ def dream_detail_view(request, dream_id):
 @login_required
 def dream_recorder_view(request):
     """Page d'enregistrement vocal du rêve"""
-    return render(request, 'diary/dream_recorder.html')
+    return render(request, 'diary/dream_recorder.html', {
+        'DREAM_ERROR_MESSAGE': DREAM_ERROR_MESSAGE
+    })
 
 
 @require_http_methods(["POST"])
@@ -207,7 +209,8 @@ def analyse_from_voice_stream(request):
     def event_stream():
         try:
             if 'audio' not in request.FILES:
-                yield f"data: {json.dumps({'step': 'error', 'message': 'Pas de fichier audio'})}\n\n"
+                logger.error("Aucun fichier audio reçu dans la requête")
+                yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
 
             audio_file = request.FILES['audio']
@@ -216,14 +219,16 @@ def analyse_from_voice_stream(request):
             # Transcription
             transcription = transcribe_audio(audio_data)
             if not transcription:
-                yield f"data: {json.dumps({'step': 'error', 'message': 'Transcription échouée'})}\n\n"
+                logger.error("Échec de la transcription audio")
+                yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
             yield f"data: {json.dumps({'step': 'transcription', 'data': {'transcription': transcription}})}\n\n"
 
             # Émotions
             emotions, dominant_emotion = analyze_emotions(transcription)
             if emotions is None:
-                yield f"data: {json.dumps({'step': 'error', 'message': 'Analyse émotions échouée'})}\n\n"
+                logger.error("Échec de l'analyse émotionnelle")
+                yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
             dream_type = classify_dream(emotions)
             formatted_dominant_emotion = EMOTION_LABELS.get(dominant_emotion[0], dominant_emotion[0].capitalize())
@@ -251,7 +256,8 @@ def analyse_from_voice_stream(request):
             # Interprétation
             interpretation = interpret_dream(transcription)
             if interpretation is None:
-                yield f"data: {json.dumps({'step': 'error', 'message': 'Interprétation échouée'})}\n\n"
+                logger.error("Échec de l'interprétation du rêve")
+                yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
                 return
 
             # Mettre à jour le rêve avec l'interprétation
@@ -264,7 +270,8 @@ def analyse_from_voice_stream(request):
             yield f"data: {json.dumps({'step': 'complete'})}\n\n"
 
         except Exception as e:
-            yield f"data: {json.dumps({'step': 'error', 'message': 'Erreur serveur'})}\n\n"
+            logger.error(f"Erreur dans analyse_from_voice_stream: {e}")
+            yield f"data: {json.dumps({'step': 'error', 'message': DREAM_ERROR_MESSAGE})}\n\n"
 
     response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'

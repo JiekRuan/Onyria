@@ -218,7 +218,7 @@
 
     } catch (error) {
       console.error('Erreur SSE:', error);
-      showStatus("Erreur: " + error.message);
+      showStatus("{{ DREAM_ERROR_MESSAGE|escapejs }}");
     } finally {
       recordBtn.classList.remove("processing");
       loadingIcon.classList.add("hidden");
@@ -285,7 +285,7 @@
         break;
       
       case 'error':
-        showStatus("Erreur : " + data.message);
+        showStatus(data.message);
         break;
     }
   }
