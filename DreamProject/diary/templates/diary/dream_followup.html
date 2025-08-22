@@ -15,24 +15,29 @@
 
 {% if has_data %}
 
-<!-- Section 1: Types de rêves avec bouton filtrer -->
-<div class="mb-8 relative">
-  <!-- Bouton Filtrer -->
-  <div class="absolute top-0 left-0 z-10">
-    <button id="filterToggle" class="btn-ballon-sm flex items-center gap-2">
+<!-- Section 1: Types de rêves avec bouton filtrer amélioré -->
+<div class="mb-8">
+  <!-- Bouton Filtrer amélioré -->
+  <div class="relative inline-block mb-8">
+    <button id="filterToggle" class="btn-filter">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z"></path>
       </svg>
-      Filtrer
+      Filtrer les données
+      <svg class="w-4 h-4 chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+      </svg>
     </button>
     
     <!-- Menu déroulant -->
-    <div id="filterDropdown" class="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-4 min-w-[320px] hidden z-20">
-      <!-- Filtre période -->
-      <div class="mb-4">
-        <label class="block text-sm font-semibold text-black mb-2">Période :</label>
-        <select id="periodSelect" class="filter-select w-full">
-          <option value="all" {% if current_period == 'all' %}selected{% endif %}>Toutes les données</option>
+    <div id="filterDropdown" class="filter-dropdown absolute top-full left-0 mt-3">
+      <!-- Section Période -->
+      <div class="mb-6">
+        <label class="filter-section-label">
+            Période d'analyse
+        </label>
+        <select id="periodSelect" class="filter-select">
+          <option value="all" {% if current_period == 'all' %}selected{% endif %}>Toutes les données disponibles</option>
           <option value="month" {% if current_period == 'month' %}selected{% endif %}>30 derniers jours</option>
           <option value="3months" {% if current_period == '3months' %}selected{% endif %}>3 derniers mois</option>
           <option value="6months" {% if current_period == '6months' %}selected{% endif %}>6 derniers mois</option>
@@ -42,27 +47,39 @@
       </div>
       
       <!-- Champs dates personnalisées -->
-      <div id="customDateRange" class="mb-4 {% if current_period != 'custom' %}hidden{% endif %}">
-        <label class="block text-sm font-semibold text-black mb-2">Dates personnalisées :</label>
-        <div class="flex flex-col sm:flex-row gap-2">
-          <input type="date" id="startDate" class="filter-input flex-1" 
-                 value="{{ current_start_date|default:'' }}"
-                 placeholder="Date début">
-          <span class="text-sm text-gray-500 self-center">à</span>
-          <input type="date" id="endDate" class="filter-input flex-1" 
-                 value="{{ current_end_date|default:'' }}"
-                 placeholder="Date fin">
+      <div id="customDateRange" class="mb-6 {% if current_period != 'custom' %}hidden{% endif %}">
+        <label class="filter-section-label">
+            Dates personnalisées
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <input type="date" id="startDate" class="filter-input" 
+                   value="{{ current_start_date|default:'' }}"
+                   placeholder="Date de début">
+            <div class="text-xs text-gray-500 mt-1 px-1">Date de début</div>
+          </div>
+          <div>
+            <input type="date" id="endDate" class="filter-input" 
+                   value="{{ current_end_date|default:'' }}"
+                   placeholder="Date de fin">
+            <div class="text-xs text-gray-500 mt-1 px-1">Date de fin</div>
+          </div>
         </div>
-        <button id="applyCustomFilter" class="btn-ballon-sm mt-2 w-full">
-          Appliquer
+        <button id="applyCustomFilter" class="btn-apply">
+            Appliquer la sélection
         </button>
       </div>
       
+      <!-- Divider -->
+      <div class="filter-divider"></div>
+      
       <!-- Affichage période active -->
-      <div class="text-center pt-2 border-t border-gray-100">
-        <p class="text-xs text-gray-600">
-          <span class="font-medium">Période :</span> {{ date_range_display }}
-        </p>
+      <div class="period-display">
+        <div class="period-display-text">
+          <strong>Période active :</strong> {{ date_range_display }}
+          <br>
+          <span class="opacity-75">{{ dream_type_stats.total }} rêve{{ dream_type_stats.total|pluralize }} analysé{{ dream_type_stats.total|pluralize }}</span>
+        </div>
       </div>
     </div>
   </div>
@@ -196,113 +213,278 @@
 
 {% endif %}
 
-<!-- CSS pour les filtres -->
+<!-- CSS pour les filtres améliorés -->
 <style>
-/* Styles pour les éléments de filtre */
-.filter-select {
-  @apply px-3 py-2 text-sm rounded-lg 
-         bg-white border border-gray-300 text-black font-normal
-         focus:outline-none focus:ring-2 focus:border-gray-400 
-         transition-all duration-150;
+/* Styles pour le bouton filtrer amélioré */
+.btn-filter {
+  color: var(--brand-800);
+  border-color: var(--brand-400);
+  background-image: linear-gradient(to bottom, var(--brand-75), var(--brand-200));
+  box-shadow: var(--shadow-inset-btn-sm);
+  transition: all 0.2s ease;
+  font-weight: 600;
+  border-width: 1.5px;
+  border-style: solid;
+  border-radius: 9999px;
+  padding: 0.625rem 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
   font-family: 'Schibsted Grotesk', sans-serif;
+  cursor: pointer;
+}
+
+.btn-filter:hover {
+  background-image: linear-gradient(to bottom, var(--brand-100), var(--brand-300));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-inset-btn);
+}
+
+.btn-filter:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-inset-btn-sm);
+}
+
+/* Animation du chevron */
+.btn-filter .chevron-icon {
+  transition: transform 0.2s ease;
+}
+
+.btn-filter.active .chevron-icon {
+  transform: rotate(180deg);
+}
+
+/* Menu déroulant amélioré */
+.filter-dropdown {
+  background: white;
+  border-radius: 1.5rem;
+  border: 1.5px solid var(--brand-400);
+  box-shadow: var(--shadow-inset-card), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 1.5rem;
+  min-width: 24rem;
+  z-index: 50;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  transition: all 0.2s ease-out;
+  pointer-events: none;
+}
+
+.filter-dropdown.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Labels de section */
+.filter-section-label {
+  color: var(--brand-800);
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+  display: block;
+  font-family: 'Schibsted Grotesk', sans-serif;
+}
+
+/* Styles pour les selects améliorés */
+.filter-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--purple-200);
+  border-radius: 0.75rem;
+  background: white;
+  color: var(--gray-700);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.5rem center;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%234e3f86' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
   background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
-  padding-right: 2.5rem;
+  background-size: 1.25em 1.25em;
+  padding-right: 3rem;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  font-family: 'Schibsted Grotesk', sans-serif;
 }
 
 .filter-select:focus {
-  --tw-ring-color: #d1d5db;
-  border-color: #9ca3af;
+  outline: none;
+  border-color: var(--brand-300);
+  box-shadow: 0 0 0 3px rgba(184, 168, 236, 0.1), inset 0 1px 2px rgba(0,0,0,0.05);
 }
 
+/* Styles pour les inputs de date améliorés */
 .filter-input {
-  @apply px-3 py-2 text-sm rounded-lg 
-         bg-white border border-gray-300 text-black font-normal
-         focus:outline-none focus:ring-2 focus:border-gray-400 
-         transition-all duration-150;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--purple-200);
+  border-radius: 0.75rem;
+  background: white;
+  color: var(--gray-700);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
   font-family: 'Schibsted Grotesk', sans-serif;
 }
 
 .filter-input:focus {
-  --tw-ring-color: #d1d5db;
-  border-color: #9ca3af;
+  outline: none;
+  border-color: var(--brand-300);
+  box-shadow: 0 0 0 3px rgba(184, 168, 236, 0.1), inset 0 1px 2px rgba(0,0,0,0.05);
 }
 
-/* Menu déroulant responsive */
-#filterDropdown {
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+.filter-input::placeholder {
+  color: var(--gray-400);
+  font-weight: 400;
 }
 
-/* Responsive adjustments */
-@media (max-width: 1000px) {
-  #filterDropdown {
-    min-width: 600px;
-    max-width: calc(100vw - 2rem);
-  }
-  
-  .filter-select {
-    font-size: 14px;
-  }
-  
-  .filter-input {
-    font-size: 14px;
-  }
+/* Bouton d'application amélioré */
+.btn-apply {
+  color: var(--brand-800);
+  border-color: var(--brand-400);
+  background-image: linear-gradient(to bottom, var(--brand-75), var(--brand-200));
+  box-shadow: var(--shadow-inset-btn-sm);
+  transition: all 0.2s ease;
+  font-weight: 600;
+  border-width: 1.5px;
+  border-style: solid;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  width: 100%;
+  margin-top: 1rem;
+  font-family: 'Schibsted Grotesk', sans-serif;
+  cursor: pointer;
 }
 
-/* Assurer que le dropdown ne déborde pas sur mobile */
-@media (max-width: 480px) {
-  #filterDropdown {
-    min-width: 260px;
-    left: 0;
-    right: 1rem;
-  }
+.btn-apply:hover {
+  background-image: linear-gradient(to bottom, var(--brand-100), var(--brand-300));
+  transform: translateY(-1px);
 }
 
-/* Animation pour le dropdown */
-#filterDropdown {
-  opacity: 0;
-  transform: translateY(-10px);
-  transition: all 0.2s ease-out;
-}
-
-#filterDropdown.show {
-  opacity: 1;
+.btn-apply:active {
   transform: translateY(0);
 }
 
-/* Cohérence typographique */
-.filter-select,
-.filter-input,
-.filter-select option {
+/* Zone d'affichage de la période */
+.period-display {
+  background-color: var(--brand-50);
+  border: 1px solid var(--brand-200);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.period-display-text {
+  color: var(--brand-800);
+  font-size: 0.75rem;
+  font-weight: 500;
   font-family: 'Schibsted Grotesk', sans-serif;
+}
+
+/* Divider */
+.filter-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--brand-200), transparent);
+  margin: 1rem 0;
+}
+
+/* États d'erreur pour les dates */
+.filter-input.error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Responsive amélioré */
+@media (max-width: 768px) {
+  .filter-dropdown {
+    min-width: 20rem;
+    left: 0 !important;
+    right: 1rem;
+  }
+  
+  .btn-filter {
+    font-size: 0.875rem;
+    padding: 0.5rem 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-dropdown {
+    min-width: 18rem;
+    max-width: calc(100vw - 2rem);
+    padding: 1.25rem;
+  }
+  
+  .btn-filter {
+    font-size: 0.8125rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  .filter-section-label {
+    font-size: 0.8125rem;
+  }
+  
+  .filter-select, .filter-input {
+    font-size: 0.8125rem;
+    padding: 0.625rem 0.875rem;
+  }
+  
+  .filter-select {
+    padding-right: 2.75rem;
+  }
+}
+
+/* Animation d'apparition progressive */
+.filter-dropdown {
+  animation-duration: 0.2s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.filter-dropdown.show {
+  animation-name: slideInDown;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 </style>
 
 <!-- Scripts pour les graphiques et filtres -->
 <script src="{% static 'js/chart.min.js' %}"></script>
 <script>
-// Gestion des filtres
+// Gestion améliorée des filtres
 document.addEventListener('DOMContentLoaded', function() {
   const filterToggle = document.getElementById('filterToggle');
   const filterDropdown = document.getElementById('filterDropdown');
   const periodSelect = document.getElementById('periodSelect');
   const customDateRange = document.getElementById('customDateRange');
   const applyCustomBtn = document.getElementById('applyCustomFilter');
+  const startInput = document.getElementById('startDate');
+  const endInput = document.getElementById('endDate');
 
-  // Toggle du menu déroulant
+  // Toggle du menu déroulant avec animations améliorées
   if (filterToggle && filterDropdown) {
     filterToggle.addEventListener('click', function(e) {
       e.stopPropagation();
       
-      if (filterDropdown.classList.contains('hidden')) {
-        filterDropdown.classList.remove('hidden');
-        setTimeout(() => filterDropdown.classList.add('show'), 10);
-      } else {
+      if (filterDropdown.classList.contains('show')) {
+        // Fermer avec animation
         filterDropdown.classList.remove('show');
-        setTimeout(() => filterDropdown.classList.add('hidden'), 200);
+        filterToggle.classList.remove('active');
+      } else {
+        // Ouvrir avec animation
+        filterDropdown.classList.add('show');
+        filterToggle.classList.add('active');
       }
     });
 
@@ -310,13 +492,22 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
       if (!filterDropdown.contains(e.target) && !filterToggle.contains(e.target)) {
         filterDropdown.classList.remove('show');
-        setTimeout(() => filterDropdown.classList.add('hidden'), 200);
+        filterToggle.classList.remove('active');
       }
     });
 
     // Empêcher la fermeture en cliquant dans le menu
     filterDropdown.addEventListener('click', function(e) {
       e.stopPropagation();
+    });
+
+    // Fermer avec Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && filterDropdown.classList.contains('show')) {
+        filterDropdown.classList.remove('show');
+        filterToggle.classList.remove('active');
+        filterToggle.focus();
+      }
     });
   }
 
@@ -327,6 +518,10 @@ document.addEventListener('DOMContentLoaded', function() {
       
       if (selectedPeriod === 'custom') {
         customDateRange.classList.remove('hidden');
+        // Focus sur le premier champ de date
+        setTimeout(() => {
+          if (startInput) startInput.focus();
+        }, 100);
       } else {
         customDateRange.classList.add('hidden');
         applyFilter(selectedPeriod);
@@ -334,50 +529,133 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Filtre personnalisé
+  // Application du filtre personnalisé avec validation améliorée
   if (applyCustomBtn) {
     applyCustomBtn.addEventListener('click', function() {
-      const startDate = document.getElementById('startDate').value;
-      const endDate = document.getElementById('endDate').value;
+      const startDate = startInput.value;
+      const endDate = endInput.value;
+      
+      // Réinitialiser les styles d'erreur
+      startInput.classList.remove('error');
+      endInput.classList.remove('error');
       
       if (!startDate || !endDate) {
-        alert('Veuillez sélectionner une date de début et une date de fin.');
+        showNotification('⚠️ Veuillez sélectionner une date de début et une date de fin.', 'warning');
+        if (!startDate) startInput.classList.add('error');
+        if (!endDate) endInput.classList.add('error');
         return;
       }
       
       if (new Date(startDate) > new Date(endDate)) {
-        alert('La date de début doit être antérieure à la date de fin.');
+        showNotification('⚠️ La date de début doit être antérieure à la date de fin.', 'error');
+        startInput.classList.add('error');
+        endInput.classList.add('error');
         return;
       }
       
+      // Vérifier que les dates ne sont pas dans le futur
+      const today = new Date();
+      if (new Date(endDate) > today) {
+        showNotification('⚠️ La date de fin ne peut pas être dans le futur.', 'warning');
+        endInput.classList.add('error');
+        return;
+      }
+      
+      showNotification('✅ Filtre appliqué avec succès !', 'success');
       applyCustomFilter(startDate, endDate);
     });
   }
 
-  // Validation en temps réel des dates
-  const startInput = document.getElementById('startDate');
-  const endInput = document.getElementById('endDate');
-  
+  // Validation en temps réel des dates avec feedback visuel
   if (startInput && endInput) {
     [startInput, endInput].forEach(input => {
       input.addEventListener('change', function() {
-        const startDate = startInput.value;
-        const endDate = endInput.value;
-        
-        if (startDate && endDate) {
-          if (new Date(startDate) > new Date(endDate)) {
-            input.setCustomValidity('La date de début doit être antérieure à la date de fin');
-            input.style.borderColor = '#ef4444';
-          } else {
-            input.setCustomValidity('');
-            input.style.borderColor = '#d1d5db';
-          }
-        }
+        validateDateInputs();
+      });
+      
+      input.addEventListener('blur', function() {
+        validateDateInputs();
       });
     });
   }
+
+  // Fonction de validation des dates
+  function validateDateInputs() {
+    const startDate = startInput.value;
+    const endDate = endInput.value;
+    
+    // Réinitialiser les styles
+    startInput.classList.remove('error');
+    endInput.classList.remove('error');
+    
+    if (startDate && endDate) {
+      if (new Date(startDate) > new Date(endDate)) {
+        startInput.classList.add('error');
+        endInput.classList.add('error');
+      }
+    }
+    
+    // Vérifier les dates futures
+    const today = new Date();
+    if (startDate && new Date(startDate) > today) {
+      startInput.classList.add('error');
+    }
+    if (endDate && new Date(endDate) > today) {
+      endInput.classList.add('error');
+    }
+  }
+
+  // Fonction pour afficher des notifications
+  function showNotification(message, type = 'info') {
+    // Créer l'élément notification s'il n'existe pas
+    let notification = document.getElementById('filterNotification');
+    if (!notification) {
+      notification = document.createElement('div');
+      notification.id = 'filterNotification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-family: 'Schibsted Grotesk', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transition: all 0.3s ease;
+        transform: translateX(100%);
+        opacity: 0;
+      `;
+      document.body.appendChild(notification);
+    }
+    
+    // Styles selon le type
+    const styles = {
+      success: { bg: '#10b981', color: '#ffffff' },
+      warning: { bg: '#f59e0b', color: '#ffffff' },
+      error: { bg: '#ef4444', color: '#ffffff' },
+      info: { bg: 'var(--brand-200)', color: 'var(--brand-800)' }
+    };
+    
+    const style = styles[type] || styles.info;
+    notification.style.backgroundColor = style.bg;
+    notification.style.color = style.color;
+    notification.textContent = message;
+    
+    // Afficher la notification
+    notification.style.transform = 'translateX(0)';
+    notification.style.opacity = '1';
+    
+    // Masquer après 3 secondes
+    setTimeout(() => {
+      notification.style.transform = 'translateX(100%)';
+      notification.style.opacity = '0';
+    }, 3000);
+  }
 });
 
+// Fonctions pour appliquer les filtres (à connecter avec votre backend Django)
 function applyFilter(period) {
   const url = new URL(window.location);
   url.searchParams.set('period', period);
@@ -685,7 +963,7 @@ if (emotionsTimeline.length > 0 && emotionsList.length > 0) {
       }
     }
   });
-  }
+}
 
 {% endif %}
 
