@@ -25,12 +25,6 @@ from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
 
 logger = logging.getLogger(__name__)
 
-
-def dream_analysis_error():
-    """Retourne une réponse JSON d'erreur standardisée"""
-    return JsonResponse({'success': False, 'error': DREAM_ERROR_MESSAGE})
-
-
 # ---------- Normalisation labels : garantit une CHAÎNE ----------
 def _as_str_label(val):
     """
