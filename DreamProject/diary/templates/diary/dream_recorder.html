@@ -220,10 +220,13 @@
       console.error('Erreur SSE:', error);
       showStatus("{{ DREAM_ERROR_MESSAGE|escapejs }}");
     } finally {
+      // Masquer les éléments de processing + titre à la fin de l'analyse vocale
       recordBtn.classList.remove("processing");
       loadingIcon.classList.add("hidden");
       micIcon.classList.remove("hidden");
       recordBtn.style.display = "none";
+      const title = document.querySelector("h1");
+      if (title) title.style.display = "none";
       
       const nav = document.getElementById("sectionNavigation");
       if (nav) nav.style.display = "flex";
