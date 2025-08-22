@@ -133,3 +133,27 @@ AUTH_USER_MODEL = 'accounts.CustomUser'  # Modèle personnalisé
 LOGIN_REDIRECT_URL = '/diary/record/'
 LOGOUT_REDIRECT_URL = 'login'
 
+LOGGING = {
+   'version': 1,
+   'disable_existing_loggers': False,
+   'formatters': {
+       'verbose': {
+           'format': '{levelname} {asctime} {module} {message}',
+           'style': '{',
+       },
+   },
+   'handlers': {
+       'console': {
+           'level': 'INFO',
+           'class': 'logging.StreamHandler',
+           'formatter': 'verbose',
+       },
+   },
+   'loggers': {
+       'diary': {
+           'handlers': ['console'],
+           'level': 'INFO',
+           'propagate': False,
+       },
+   },
+}
