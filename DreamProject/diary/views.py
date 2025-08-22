@@ -25,12 +25,6 @@ from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
 
 logger = logging.getLogger(__name__)
 
-
-def dream_analysis_error():
-    """Retourne une réponse JSON d'erreur standardisée"""
-    return JsonResponse({'success': False, 'error': DREAM_ERROR_MESSAGE})
-
-
 # ---------- Normalisation labels : garantit une CHAÎNE ----------
 def _as_str_label(val):
     """
@@ -208,11 +202,18 @@ def analyse_from_voice(request):
             )
             logger.debug(f"Rêve {dream.id} créé")
 
-            # Image (optionnelle)
+            # Image
             image_success = generate_image_from_text(request.user, transcription, dream)
-            if image_success and dream.image_url:
-                yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': dream.image_url}})}\n\n"
+            if image_success:
+                dream.refresh_from_db()
+                if dream.image_url:
+                    logger.info(f"Image envoyée via SSE pour rêve {dream.id}")
+                    yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': dream.image_url}})}\n\n"
+                else:
+                    logger.warning(f"Image générée mais URL manquante pour rêve {dream.id}")
+                    yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': None}})}\n\n"
             else:
+                logger.warning(f"Échec génération image pour rêve {dream.id}")
                 yield f"data: {json.dumps({'step': 'image', 'data': {'image_path': None}})}\n\n"
 
             # Interprétation
