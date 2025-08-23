@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,16 +23,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-y7^764y!vsgk@&0bou_ht(^ca(spl1s!a$sx64b$@@0f=!0-nu'
+SECRET_KEY = os.environ.get("SECRET_KEY", 'django-insecure-y7^764y!vsgk@&0bou_ht(^ca(spl1s!a$sx64b$@@0f=!0-nu')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 
-ALLOWED_HOSTS = []
+# Parse ALLOWED_HOSTS from env allowing commas and/or spaces, without schemes
+_hosts_raw = os.environ.get("ALLOWED_HOSTS", "")
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in _hosts_raw.replace("https://", "").replace("http://", "").replace(",", " ").split()
+    if h.strip()
+]
 
 # Application definition
 
 INSTALLED_APPS = [
+    "whitenoise.runserver_nostatic",
     "diary.apps.DiaryConfig",
     'django.contrib.admin',
     'django.contrib.auth',
@@ -43,6 +53,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -74,12 +85,19 @@ WSGI_APPLICATION = 'Onyria.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Configuration adaptative : utilise DATABASE_URL si présent, sinon SQLite local
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    DATABASES = {
+        'default': dj_database_url.parse(database_url)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -118,9 +136,16 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-STATICFILES_DIRS = [
-    BASE_DIR.parent / "static",
-]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# WhiteNoise storage: hashed filenames + gzip/brotli (Django 5.x)
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
+# Emplacement des sources d'assets (dossier 'static' à la racine du repo)
+STATICFILES_DIRS = [ BASE_DIR.parent / "static" ]
 
 
 # Default primary key field type
