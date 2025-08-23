@@ -20,6 +20,7 @@ import time
 import base64
 import threading
 import unittest
+import os
 from collections import defaultdict
 
 from ..models import Dream
@@ -417,7 +418,7 @@ class DreamModelTest(TestCase):
         self.assertEqual(dream.transcription, special_text)
 
     @unittest.skipIf(
-        settings.DATABASES['default']['ENGINE'].endswith('sqlite3'),
+        not os.environ.get("DATABASE_URL"),
         "Tests de concurrence nécessitent PostgreSQL. "
         "SQLite ne supporte pas les écritures simultanées. "
         "Ce test sera automatiquement activé en production avec PostgreSQL."
@@ -563,7 +564,11 @@ class DreamModelTest(TestCase):
         print(f"Total créé: {db_dreams_count}")
         print(f"Temps d'exécution: {execution_time:.2f}s")
         print(f"Débit: {total_expected/execution_time:.1f} rêves/seconde")
-
+    
+    @unittest.skipIf(
+        os.environ.get("DATABASE_URL"),
+        "Test SQLite seulement."
+    )
     def test_concurrent_dream_creation_fallback_sqlite(self):
         """
         Version simplifiée du test de concurrence pour SQLite.

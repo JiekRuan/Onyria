@@ -1,3 +1,4 @@
+/* --- Déclarations de police (fichiers dans /static/Font/) --- */
 @font-face {
   font-family: 'Schibsted Grotesk';
   src: url('../Font/schibsted-grotesk-v6-latin-regular.woff2') format('woff2');
@@ -5,7 +6,6 @@
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Schibsted Grotesk';
   src: url('../Font/schibsted-grotesk-v6-latin-500.woff2') format('woff2');
@@ -21,9 +21,15 @@
   font-display: swap;
 }
 
+/* --- Tailwind --- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* --- Appliquer la police par défaut partout --- */
+@layer base {
+  html { @apply font-sans; }
+}
 
 /* ===== Design tokens ===== */
 :root{
@@ -34,6 +40,12 @@
   --brand-300: #cdbef4;
   --brand-400: #b9a8ec;
   --brand-800: #4e3f86;
+
+  /* Couleurs pour formulaires */
+  --gray-400: #9ca3af;   /* placeholders */
+  --gray-700: #374151;   /* texte normal */
+  --purple-200: #d9d1fa; /* bordures champs */
+  --purple-600: #7961dd; /* liens */
 
   --shadow-inset-btn:    inset 0 3px 3px rgba(255,255,255,.7), inset 0 -4px 7px rgba(0,0,0,.12), 0 6px 14px rgba(0,0,0,.12);
   --shadow-inset-btn-sm: inset 0 5px 8px rgba(255,255,255,.75), inset 0 -2px 4px rgba(0,0,0,.05), 0 5px 10px rgba(0,0,0,.07);
@@ -48,7 +60,75 @@
   .u-shadow-btn-sm{ --tw-shadow: var(--shadow-inset-btn-sm); }
   .u-shadow-card{   --tw-shadow: var(--shadow-inset-card); }
 
-  /* ===== Boutons “ballon” ===== */
+  /* ===== Formulaires et champs ===== */
+  
+  /* Gestion des placeholders */
+  ::placeholder {
+    color: var(--gray-400);
+    opacity: 1;
+    font-weight: 400;
+  }
+  
+  /* Styles pour les champs de formulaire */
+  .form-field {
+    @apply w-full px-4 py-2 bg-white rounded-lg 
+           shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] 
+           focus:outline-none focus:ring-2 
+           transition-all duration-150;
+    border: 1px solid var(--purple-200);
+    color: var(--gray-700);
+  }
+  
+  .form-field:focus {
+    border-color: var(--brand-200);
+    --tw-ring-color: var(--brand-200);
+  }
+  
+  /* Style pour les labels */
+  .form-label {
+    @apply block font-normal mb-1;
+    color: var(--gray-700);
+  }
+  
+  /* Style pour les messages d'erreur */
+  .form-error {
+    @apply text-red-500 text-sm mt-1;
+  }
+
+  /* ===== Styles pour templates accounts ===== */
+  
+  /* Conteneur principal des formulaires */
+  .form-container {
+    @apply space-y-5;
+  }
+  
+  /* Titre des pages d'authentification */
+  .auth-title {
+    @apply text-3xl font-normal mb-6 text-center;
+    color: var(--gray-700);
+  }
+  
+  /* Liens en bas des formulaires */
+  .auth-link {
+    @apply mt-6 text-center text-sm;
+    color: #6b7280; /* gray-500 pour le texte principal */
+  }
+  
+  .auth-link a {
+    color: var(--purple-600);
+    @apply hover:underline;
+  }
+  
+  /* Conteneur pour boutons côte à côte */
+  .button-group {
+    @apply flex space-x-4;
+  }
+  
+  .button-group-center {
+    @apply flex space-x-4 justify-center;
+  }
+
+  /* ===== Boutons "ballon" ===== */
   .btn-ballon-base{
     color: var(--brand-800);
     border-color: var(--brand-400);
@@ -73,7 +153,7 @@
     @apply btn-ballon-base w-20 h-20 rounded-full flex items-center justify-center cursor-pointer;
   }
   .btn-ballon-record.recording{ @apply animate-pulse; }
-  .btn-ballon-record.processing{ @apply opacity-75; }
+  .btn-ballon-record.processing{ @apply opacity-75 mb-8; }
 
   /* ===== BG utilitaire legacy ===== */
   .bg-pastel-baby-powder{ background-color:#FDFBF7; }
@@ -182,9 +262,9 @@
 
 /* ===== Responsive sidebar ===== */
 @media (max-width:1279px){
-  .sidebar{ @apply hidden !important; }
-  .content-area{ margin-left:0 !important; }
+  .sidebar{ @apply hidden }
+  .content-area{ margin-left:0; }
 }
 @media (min-width:1280px){
-  .content-area{ margin-left:16rem !important; } /* 256px */
+  .content-area{ margin-left:16rem; } /* 256px */
 }

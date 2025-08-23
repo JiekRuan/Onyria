@@ -8,5 +8,11 @@ fatigue,
 apeure,
 surpris,
 serein.
+
+Réponds uniquement par un objet JSON valide, sans texte autour, sans bloc de code.
+Clés exactes : heureux, anxieux, triste, en_colere, fatigue, apeure, surpris, serein.
+Valeurs : nombres flottants entre 0 et 1 avec un point comme séparateur décimal, sans guillemets.
+Exemple de sortie valide :
+{"heureux":0.12,"anxieux":0.0,"triste":0.33,"en_colere":0.0,"fatigue":0.1,"apeure":0.2,"surpris":0.1,"serein":0.15}
+
 Attention, l'utilisateur peut faire preuve d'ironie.
-Le résultat doit respecter exactement la structure spécifiée ; aucun autre champ, commentaire ou formatage n'est autorisé.
