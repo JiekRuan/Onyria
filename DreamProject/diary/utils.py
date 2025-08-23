@@ -4,6 +4,7 @@ import math
 import time
 import tempfile
 import logging
+import httpx  # nouveau: fallback HTTP direct
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.core.files.base import ContentFile
@@ -28,12 +29,19 @@ DEFAULT_TEMPERATURE = 0.0
 MAX_FALLBACK_RETRIES = 3
 IMAGE_GENERATION_MODEL = "mistral-medium-2505"
 
+# nouveau: paramètres de retry pour la transcription
+TRANSCRIBE_MAX_RETRIES = 3
+TRANSCRIBE_BACKOFF_BASE = 1.5  # secondes (exponentiel: 1.5, 2.25, 3.38...)
+
 BASE_DIR = settings.BASE_DIR
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 
 # Clients externes
-groq_client = Groq(api_key=GROQ_API_KEY)
+groq_client = Groq(
+    api_key=GROQ_API_KEY,
+    http_client=httpx.Client(http2=False, timeout=30)  # HTTP/1.1 + timeout ↑
+)
 mistral_client = Mistral(api_key=MISTRAL_API_KEY)
 
 # ---------- UTILS ----------
@@ -102,49 +110,138 @@ def validate_and_fix_interpretation(interpretation_data):
     return fixed_interpretation
 
 
+# ---------- RETRY SYSTEM ----------
+
+def _is_retryable_transcription_error(err: Exception) -> bool:
+    """nouveau: détecte les erreurs réseau/temporaires qui méritent un retry"""
+    msg = str(err).lower()
+    keywords = [
+        "connection error", "connection reset", "connection aborted",
+        "timeout", "temporarily unavailable", "service unavailable",
+        "tls", "ssl", "proxy", "rate limit", "503", "502", "429",
+    ]
+    return any(k in msg for k in keywords)
+
+
+def _transcribe_via_httpx(file_path: str, language: str = "fr") -> str | None:
+    """
+    nouveau: Fallback direct sur l'API Groq (OpenAI-compatible) en HTTP/1.1 via httpx.
+    Désactive HTTP/2 pour éviter certains soucis de handshake/proxy.
+    """
+    if not GROQ_API_KEY:
+        logger.error("HTTPX fallback: GROQ_API_KEY manquante")
+        return None
+
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+
+    # Multipart form-data — liste de tuples pour gérer les champs répétés
+    data = [
+        ("model", WHISPER_MODEL),
+        ("prompt", "Specify context or spelling"),
+        ("response_format", "json"),
+        ("language", language),
+        ("temperature", str(DEFAULT_TEMPERATURE)),
+        ("timestamp_granularities[]", "word"),
+        ("timestamp_granularities[]", "segment"),
+    ]
+
+    try:
+        with open(file_path, "rb") as f:
+            files = {"file": ("audio.wav", f, "audio/wav")}
+            timeout = httpx.Timeout(connect=15.0, read=180.0, write=60.0, pool=60.0)
+            limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
+            with httpx.Client(http2=False, timeout=timeout, limits=limits, trust_env=True) as client:
+                r = client.post(url, headers=headers, data=data, files=files)
+                r.raise_for_status()
+                payload = r.json()
+                text = payload.get("text")
+                if text:
+                    logger.info(f"HTTPX fallback OK - {len(text)} caractères")
+                    return text
+                logger.error(f"HTTPX fallback: réponse inattendue {payload}")
+                return None
+    except Exception as e:
+        logger.error(f"HTTPX fallback échec: {e}")
+        return None
+
+
 # ---------- TRANSCRIPTION ----------
 
 
 def transcribe_audio(audio_data, language="fr"):
-    """Transcrit un audio en texte avec Whisper de Groq"""
+    """Transcrit un audio en texte avec Whisper de Groq + système retry"""
     logger.info(f"Transcription audio démarrée - {len(audio_data)} bytes")
     start_time = time.time()
 
+    # garde-fou si la clé est absente/mal configurée en préprod
+    if not GROQ_API_KEY:
+        logger.error("Échec transcription audio: GROQ_API_KEY manquante")
+        return None
+    
+    temp_file_path = None
     try:
-        with tempfile.NamedTemporaryFile(
-            suffix='.wav', delete=False
-        ) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
             temp_file.write(audio_data)
             temp_file_path = temp_file.name
 
-        with open(temp_file_path, "rb") as audio_file:
-            transcription = groq_client.audio.transcriptions.create(
-                file=audio_file,
-                model=WHISPER_MODEL,
-                prompt="Specify context or spelling",
-                response_format="verbose_json",
-                timestamp_granularities=["word", "segment"],
-                language=language,
-                temperature=DEFAULT_TEMPERATURE,
-            )
+        last_error = None
 
-        os.unlink(temp_file_path)
-        duration = time.time() - start_time
-        
-        # Alertes sur contenu problématique
-        if len(transcription.text) < 10:
-            logger.warning(f"Transcription très courte: {len(transcription.text)} caractères")
-        
-        if duration > 5:
-            logger.warning(f"Transcription lente: {duration:.2f}s")
-        
-        logger.info(f"Transcription réussie - {len(transcription.text)} caractères en {duration:.2f}s")
-        return transcription.text
+        # Système de retry avec backoff exponentiel
+        for attempt in range(1, TRANSCRIBE_MAX_RETRIES + 1):
+            try:
+                logger.info(f"Transcription tentative {attempt}/{TRANSCRIBE_MAX_RETRIES}")
+                with open(temp_file_path, "rb") as audio_file:
+                    transcription = groq_client.audio.transcriptions.create(
+                        file=audio_file,
+                        model=WHISPER_MODEL,
+                        prompt="Specify context or spelling",
+                        response_format="verbose_json",
+                        timestamp_granularities=["word", "segment"],
+                        language=language,
+                        temperature=DEFAULT_TEMPERATURE,
+                    )
 
-    except Exception as e:
-        duration = time.time() - start_time
-        logger.error(f"Échec transcription après {duration:.2f}s: {e}")
-        return None
+                duration = time.time() - start_time
+                
+                # Alertes sur contenu problématique
+                if len(transcription.text) < 10:
+                    logger.warning(f"Transcription très courte: {len(transcription.text)} caractères")
+                
+                if duration > 5:
+                    logger.warning(f"Transcription lente: {duration:.2f}s")
+                
+                logger.info(f"Transcription réussie - {len(transcription.text)} caractères en {duration:.2f}s")
+                return transcription.text
+
+            except Exception as e:
+                last_error = e
+                if _is_retryable_transcription_error(e) and attempt < TRANSCRIBE_MAX_RETRIES:
+                    sleep_s = round(TRANSCRIBE_BACKOFF_BASE ** attempt, 2)
+                    logger.warning(f"Transcription erreur réseau (retry dans {sleep_s}s): {e}")
+                    time.sleep(sleep_s)
+                    continue
+                else:
+                    logger.error("Transcription error (%s): %s", type(e).__name__, e)
+                    break
+
+        # Fallback HTTPX en dernier recours
+        logger.info("Tentative fallback HTTPX pour la transcription…")
+        result = _transcribe_via_httpx(temp_file_path, language)
+        
+        if result:
+            duration = time.time() - start_time
+            logger.info(f"Fallback HTTPX réussi en {duration:.2f}s")
+        
+        return result
+
+    finally:
+        # Nettoyage du fichier temporaire même en cas d'erreur
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.unlink(temp_file_path)
+            except Exception as e:
+                logger.warning(f"Impossible de supprimer le fichier temporaire: {e}")
 
 
 # ---------- FALLBACK SYSTEM ----------
