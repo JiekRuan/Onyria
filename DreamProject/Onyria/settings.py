@@ -138,13 +138,21 @@ STATIC_URL = '/static/'
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# WhiteNoise storage: hashed filenames + gzip/brotli (Django 5.x)
-STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
-}
+# Configuration adaptative des fichiers statiques
+if DEBUG:
+    # Développement : pas de compression/hashing
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+else:
+    # Production : WhiteNoise avec compression
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    }
 
-# Emplacement des sources d'assets (dossier 'static' à la racine du repo)
+# Emplacement de tes sources d'assets (dossier 'static' à la racine du repo)
 STATICFILES_DIRS = [ BASE_DIR.parent / "static" ]
 
 
