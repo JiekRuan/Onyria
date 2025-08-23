@@ -356,7 +356,7 @@ class DreamFollowupViewTest(TestCase):
             password='testpass123'
         )
         self.client = Client()
-        
+
         # Créer quelques rêves pour les tests
         self._create_test_dreams()
 
