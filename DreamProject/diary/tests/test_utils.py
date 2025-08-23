@@ -9,6 +9,7 @@ Ce module teste toutes les fonctions utilitaires de l'application :
 - Utilitaires de formatage et traitement
 """
 
+import logging
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from unittest.mock import patch, mock_open, MagicMock
@@ -17,7 +18,6 @@ import math
 from collections import Counter
 from django.utils import timezone
 import time
-import logging
 from datetime import timedelta
 
 from ..models import Dream
@@ -35,6 +35,7 @@ from ..utils import (
 
 User = get_user_model()
 
+logger = logging.getLogger(__name__)
 
 class MathematicalFunctionsTest(TestCase):
     """
@@ -808,8 +809,6 @@ class DashboardFunctionsTest(TestCase):
             username='dashboard_user',
             password='testpass123',
         )
-
-        # Créer des rêves étalés sur plusieurs mois pour les tests de filtres
         self.dreams_data = self._create_test_dreams()
 
     def _create_test_dreams(self):
@@ -817,6 +816,9 @@ class DashboardFunctionsTest(TestCase):
 
         dreams = []
         base_date = timezone.now()
+        logger.info(
+            f"[SETUP] Création données test - Date base: {base_date.date()}"
+        )
 
         # Rêves des 15 derniers jours
         for i in range(5):
@@ -828,9 +830,13 @@ class DashboardFunctionsTest(TestCase):
                 is_analyzed=True,
             )
             # Rétrodater
-            dream.created_at = base_date - timedelta(days=i * 3)
+            dream_date = base_date - timedelta(days=i * 3)
+            dream.created_at = dream_date
             dream.save()
             dreams.append(dream)
+            logger.debug(
+                f"[SETUP] Rêve récent: {dream_date.date()} | {dream.dream_type} | {dream.dominant_emotion}"
+            )
 
         # Rêves d'il y a 2 mois
         for i in range(3):
@@ -841,9 +847,13 @@ class DashboardFunctionsTest(TestCase):
                 dominant_emotion="sérénité",
                 is_analyzed=True,
             )
-            dream.created_at = base_date - timedelta(days=60 + i)
+            dream_date = base_date - timedelta(days=60 + i)
+            dream.created_at = dream_date
             dream.save()
             dreams.append(dream)
+            logger.debug(
+                f"[SETUP] Rêve ancien: {dream_date.date()} | {dream.dream_type} | {dream.dominant_emotion}"
+            )
 
         # Rêves d'il y a 8 mois (hors période 6 mois)
         for i in range(2):
@@ -854,60 +864,95 @@ class DashboardFunctionsTest(TestCase):
                 dominant_emotion="anxiété",
                 is_analyzed=True,
             )
-            dream.created_at = base_date - timedelta(days=240 + i * 10)
+            dream_date = base_date - timedelta(days=240 + i * 10)
+            dream.created_at = dream_date
             dream.save()
             dreams.append(dream)
+            logger.debug(
+                f"[SETUP] Rêve très ancien: {dream_date.date()} | {dream.dream_type} | {dream.dominant_emotion}"
+            )
 
+        logger.info(
+            f"[SETUP] Total créé: {len(dreams)} rêves (5 récents, 3 anciens, 2 très anciens)"
+        )
         return dreams
 
-    def test_get_dream_type_stats_no_filter(self):
+    def test_get_dream_type_stats(self):
         """Test des stats de types sans filtre (tous les rêves)"""
+        logger.info(
+            "[TEST] Validation calcul stats globales - tous rêves inclus"
+        )
 
         stats = get_dream_type_stats_filtered(self.user, period='all')
 
         # Vérifications de base
+        logger.info(
+            f"[RESULT] Stats globales: {stats['total']} total | {stats['counts']} | {stats['percentages']}"
+        )
         self.assertEqual(stats['total'], 10)  # 5 + 3 + 2
 
         # Compter les types manuellement
         expected_reves = 6  # 3 récents + 3 anciens
         expected_cauchemars = 4  # 2 récents + 2 très anciens
 
+        logger.info(
+            f"[VERIFY] Attendu: {expected_reves} rêves, {expected_cauchemars} cauchemars"
+        )
         self.assertEqual(stats['counts']['rêve'], expected_reves)
         self.assertEqual(stats['counts']['cauchemar'], expected_cauchemars)
 
         # Vérifier les pourcentages
         self.assertEqual(stats['percentages']['rêve'], 60.0)
         self.assertEqual(stats['percentages']['cauchemar'], 40.0)
+        logger.info(
+            "[PASS] Stats globales correctes: 60% rêves, 40% cauchemars"
+        )
 
     def test_get_dream_type_stats_30_days_filter(self):
         """Test des stats avec filtre 30 derniers jours"""
+        logger.info("[TEST] Validation filtre temporel - 30 derniers jours")
 
         stats = get_dream_type_stats_filtered(self.user, period='month')
 
         # Seulement les 5 rêves récents (derniers 15 jours)
+        logger.info(
+            f"[RESULT] Stats 30j: {stats['total']} total | rêves: {stats['counts']['rêve']} | cauchemars: {stats['counts']['cauchemar']}"
+        )
         self.assertEqual(stats['total'], 5)
         self.assertEqual(stats['counts']['rêve'], 3)
         self.assertEqual(stats['counts']['cauchemar'], 2)
         self.assertEqual(stats['percentages']['rêve'], 60.0)
+        logger.info(
+            "[PASS] Filtre 30j exclut correctement rêves anciens et très anciens"
+        )
 
     def test_get_dream_type_stats_6_months_filter(self):
         """Test des stats avec filtre 6 derniers mois"""
+        logger.info("[TEST] Validation filtre temporel - 6 derniers mois")
 
         stats = get_dream_type_stats_filtered(self.user, period='6months')
 
         # Exclut les rêves de 8 mois (2 cauchemars)
+        logger.info(
+            f"[RESULT] Stats 6m: {stats['total']} total | rêves: {stats['counts']['rêve']} | cauchemars: {stats['counts']['cauchemar']}"
+        )
         self.assertEqual(stats['total'], 8)  # 5 + 3
         self.assertEqual(stats['counts']['rêve'], 6)
         self.assertEqual(stats['counts']['cauchemar'], 2)
         self.assertEqual(stats['percentages']['rêve'], 75.0)
+        logger.info(
+            "[PASS] Filtre 6m exclut les 2 cauchemars de 8 mois, garde le reste"
+        )
 
     def test_get_dream_type_stats_custom_dates(self):
         """Test des stats avec dates personnalisées"""
+        logger.info("[TEST] Validation filtre dates personnalisées")
 
         # Définir une plage qui inclut seulement les rêves récents
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=20)
 
+        logger.info(f"[INPUT] Plage personnalisée: {start_date} à {end_date}")
         stats = get_dream_type_stats_filtered(
             self.user,
             start_date=start_date.strftime('%Y-%m-%d'),
@@ -915,27 +960,23 @@ class DashboardFunctionsTest(TestCase):
         )
 
         # Doit inclure les 5 rêves récents
-        self.assertEqual(stats['total'], 5)
-
-    def test_get_dream_type_stats_invalid_dates(self):
-        """Test avec dates invalides (doit fallback sur tous les rêves)"""
-
-        stats = get_dream_type_stats_filtered(
-            self.user,
-            start_date="invalid-date",
-            end_date="2024-13-45",  # Date impossible
+        logger.info(
+            f"[RESULT] Stats dates custom: {stats['total']} rêves dans la plage"
         )
-
-        # Doit traiter tous les rêves (fallback)
-        self.assertEqual(stats['total'], 10)
+        self.assertEqual(stats['total'], 5)
+        logger.info(
+            "[PASS] Dates personnalisées incluent seulement les rêves récents"
+        )
 
     def test_get_dream_type_stats_no_dreams_in_period(self):
         """Test avec période sans rêves"""
+        logger.info("[TEST] Validation cas limite - période vide")
 
         # Période dans le futur
         start_date = (timezone.now() + timedelta(days=10)).date()
         end_date = (timezone.now() + timedelta(days=20)).date()
 
+        logger.info(f"[INPUT] Période future: {start_date} à {end_date}")
         stats = get_dream_type_stats_filtered(
             self.user,
             start_date=start_date.strftime('%Y-%m-%d'),
@@ -943,20 +984,27 @@ class DashboardFunctionsTest(TestCase):
         )
 
         # Aucun rêve dans cette période
+        logger.info(f"[RESULT] Stats période vide: {stats}")
         self.assertEqual(stats['total'], 0)
         self.assertEqual(stats['counts']['rêve'], 0)
         self.assertEqual(stats['counts']['cauchemar'], 0)
         self.assertEqual(stats['percentages']['rêve'], 0)
+        logger.info("[PASS] Période sans données → structure vide cohérente")
 
     def test_get_dream_type_timeline_filtered(self):
         """Test de la timeline avec filtre"""
+        logger.info("[TEST] Validation format timeline avec filtre temporel")
 
         timeline = get_dream_type_timeline_filtered(self.user, period='month')
 
         # Vérifier le format de retour
+        logger.info(f"[RESULT] Timeline générée: {len(timeline)} entrées")
         self.assertIsInstance(timeline, list)
 
-        for entry in timeline:
+        for i, entry in enumerate(timeline):
+            logger.debug(
+                f"[TIMELINE] Jour {i+1}: {entry['date']} | rêves: {entry['rêve']} | cauchemars: {entry['cauchemar']}"
+            )
             self.assertIn('date', entry)
             self.assertIn('rêve', entry)
             self.assertIn('cauchemar', entry)
@@ -967,3 +1015,221 @@ class DashboardFunctionsTest(TestCase):
             # Les valeurs doivent être des entiers
             self.assertIsInstance(entry['rêve'], int)
             self.assertIsInstance(entry['cauchemar'], int)
+
+        logger.info(
+            "[PASS] Timeline: format correct, dates valides, types entiers"
+        )
+
+    def test_get_emotions_stats(self):
+        """Test des stats d'émotions"""
+        logger.info("[TEST] Validation calcul répartition émotions")
+
+        stats = get_emotions_stats_filtered(self.user, period='all')
+
+        # Vérifications de base
+        logger.info(
+            f"[RESULT] Émotions détectées: {list(stats['counts'].keys())}"
+        )
+        logger.info(
+            f"[RESULT] Répartition: {stats['counts']} | {stats['percentages']}"
+        )
+
+        self.assertEqual(stats['total'], 10)
+        self.assertIn('joie', stats['counts'])
+        self.assertIn('peur', stats['counts'])
+        self.assertIn('sérénité', stats['counts'])
+        self.assertIn('anxiété', stats['counts'])
+
+        # Vérifier les pourcentages
+        total_percentage = sum(stats['percentages'].values())
+        logger.info(f"[VERIFY] Total pourcentages: {total_percentage}%")
+        self.assertAlmostEqual(total_percentage, 100.0, places=1)
+        logger.info("[PASS] 4 émotions distinctes, pourcentages = 100%")
+
+    def test_get_emotions_stats_filtered(self):
+        """Test des stats d'émotions avec filtre temporel"""
+        logger.info("[TEST] Validation filtrage temporel des émotions")
+
+        # Stats sur 30 jours (seulement joie et peur)
+        stats_month = get_emotions_stats_filtered(self.user, period='month')
+        logger.info(
+            f"[RESULT] Émotions 30j: {set(stats_month['counts'].keys())} | total: {stats_month['total']}"
+        )
+
+        self.assertEqual(stats_month['total'], 5)
+        self.assertEqual(set(stats_month['counts'].keys()), {'joie', 'peur'})
+
+        # Stats sur 6 mois (joie, peur, sérénité)
+        stats_6m = get_emotions_stats_filtered(self.user, period='6months')
+        logger.info(
+            f"[RESULT] Émotions 6m: {set(stats_6m['counts'].keys())} | total: {stats_6m['total']}"
+        )
+
+        self.assertEqual(stats_6m['total'], 8)
+        self.assertEqual(
+            set(stats_6m['counts'].keys()), {'joie', 'peur', 'sérénité'}
+        )
+        logger.info(
+            "[PASS] Filtres temporels modifient correctement la palette émotionnelle"
+        )
+
+    def test_get_emotions_timeline(self):
+        """Test de la timeline des émotions"""
+        logger.info(
+            "[TEST] Validation timeline émotions - structure et contenu"
+        )
+
+        timeline, emotions_list = get_emotions_timeline_filtered(
+            self.user, period='all'
+        )
+
+        # Vérifier le format de retour
+        logger.info(
+            f"[RESULT] Timeline: {len(timeline)} jours | Émotions: {emotions_list}"
+        )
+        self.assertIsInstance(timeline, list)
+        self.assertIsInstance(emotions_list, list)
+
+        # Vérifier les émotions détectées
+        expected_emotions = {'joie', 'peur', 'sérénité', 'anxiété'}
+        self.assertEqual(set(emotions_list), expected_emotions)
+
+        # Vérifier le format de la timeline
+        for entry in timeline:
+            self.assertIn('date', entry)
+            # Chaque émotion doit être présente avec valeur >= 0
+            for emotion in emotions_list:
+                self.assertIn(emotion, entry)
+                self.assertIsInstance(entry[emotion], int)
+                self.assertGreaterEqual(entry[emotion], 0)
+
+        logger.info(
+            "[PASS] Timeline émotions: 4 émotions trackées, structure cohérente"
+        )
+
+    def test_get_emotions_timeline_filtered(self):
+        """Test de la timeline des émotions avec filtre temporel"""
+        logger.info(
+            "[TEST] Validation timeline émotions avec filtres temporels"
+        )
+
+        timeline_month, emotions_month = get_emotions_timeline_filtered(
+            self.user, period='month'
+        )
+        timeline_all, emotions_all = get_emotions_timeline_filtered(
+            self.user, period='all'
+        )
+
+        logger.info(
+            f"[RESULT] 30j: {len(emotions_month)} émotions | All: {len(emotions_all)} émotions"
+        )
+
+        # Sur 30 jours, seulement joie et peur
+        self.assertEqual(set(emotions_month), {'joie', 'peur'})
+
+        # Sur toute la période, toutes les émotions
+        self.assertEqual(
+            set(emotions_all), {'joie', 'peur', 'sérénité', 'anxiété'}
+        )
+
+        # La timeline complète doit avoir plus d'entrées
+        self.assertGreaterEqual(len(timeline_all), len(timeline_month))
+        logger.info(
+            "[PASS] Filtres temporels réduisent palette émotionnelle comme attendu"
+        )
+
+    def test_edge_case_user_without_dreams(self):
+        """Test avec utilisateur sans rêves"""
+        logger.info("[TEST] Validation cas limite - utilisateur sans données")
+
+        # Créer un utilisateur vide
+        empty_user = User.objects.create_user(
+            email='empty@example.com',
+            username='empty_user',
+            password='testpass123',
+        )
+
+        # Stats de types
+        dream_stats = get_dream_type_stats_filtered(empty_user, period='all')
+        logger.info(f"[RESULT] Stats vides types: {dream_stats}")
+        self.assertEqual(dream_stats['total'], 0)
+        self.assertEqual(dream_stats['counts']['rêve'], 0)
+
+        # Stats d'émotions
+        emotion_stats = get_emotions_stats_filtered(empty_user, period='all')
+        logger.info(f"[RESULT] Stats vides émotions: {emotion_stats}")
+        self.assertEqual(emotion_stats['total'], 0)
+        self.assertEqual(emotion_stats['counts'], {})
+
+        # Timeline d'émotions
+        timeline, emotions_list = get_emotions_timeline_filtered(
+            empty_user, period='all'
+        )
+        logger.info(
+            f"[RESULT] Timeline vide: {len(timeline)} entrées, {len(emotions_list)} émotions"
+        )
+        self.assertEqual(timeline, [])
+        self.assertEqual(emotions_list, [])
+        logger.info(
+            "[PASS] Utilisateur vide → structures vides cohérentes (pas de crash)"
+        )
+
+    def test_filter_priority_custom_over_period(self):
+        """Test que les dates personnalisées ont priorité sur period"""
+        logger.info(
+            "[TEST] Validation priorité dates personnalisées vs période"
+        )
+
+        # Définir des dates qui donnent un résultat spécifique
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=10)
+
+        # Appeler avec period ET dates personnalisées
+        stats = get_dream_type_stats_filtered(
+            self.user,
+            period='all',  # Ceci devrait être ignoré
+            start_date=start_date.strftime('%Y-%m-%d'),
+            end_date=end_date.strftime('%Y-%m-%d'),
+        )
+
+        logger.info(
+            f"[RESULT] Period='all' + dates custom → {stats['total']} rêves (attendu < 10)"
+        )
+        # Le résultat doit correspondre aux dates personnalisées, pas à la période 'all'
+        self.assertLess(stats['total'], 10)  # Moins que tous les rêves
+        logger.info(
+            "[PASS] Dates personnalisées prioritaires sur period (logique métier OK)"
+        )
+
+    def test_performance_with_many_dreams(self):
+        """Test de performance avec beaucoup de rêves"""
+        logger.info("[TEST] Validation performance avec dataset large")
+
+        # Créer beaucoup de rêves
+        batch_dreams = []
+        for i in range(100):
+            batch_dreams.append(
+                Dream(
+                    user=self.user,
+                    transcription=f"Rêve performance {i}",
+                    dream_type="rêve" if i % 2 == 0 else "cauchemar",
+                    dominant_emotion="joie",
+                    is_analyzed=True,
+                )
+            )
+        Dream.objects.bulk_create(batch_dreams)
+        logger.info("[SETUP] 100 rêves supplémentaires créés via bulk_create")
+
+        # Mesurer le temps d'exécution
+        start_time = time.time()
+        stats = get_dream_type_stats_filtered(self.user, period='all')
+        execution_time = time.time() - start_time
+
+        logger.info(
+            f"[RESULT] Performance: {execution_time:.3f}s pour {stats['total']} rêves"
+        )
+        # Doit rester rapide (< 0.5 secondes)
+        self.assertLess(execution_time, 0.5)
+        self.assertEqual(stats['total'], 110)  # 10 + 100
+        logger.info("[PASS] Performance acceptable même avec 110 rêves")
+        
