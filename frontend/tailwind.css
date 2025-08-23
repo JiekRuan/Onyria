@@ -64,7 +64,7 @@
   
   /* Gestion des placeholders */
   ::placeholder {
-    color: var(--gray-400) !important;
+    color: var(--gray-400);
     opacity: 1;
     font-weight: 400;
   }
@@ -262,9 +262,9 @@
 
 /* ===== Responsive sidebar ===== */
 @media (max-width:1279px){
-  .sidebar{ @apply hidden !important; }
-  .content-area{ margin-left:0 !important; }
+  .sidebar{ @apply hidden }
+  .content-area{ margin-left:0; }
 }
 @media (min-width:1280px){
-  .content-area{ margin-left:16rem !important; } /* 256px */
+  .content-area{ margin-left:16rem; } /* 256px */
 }
