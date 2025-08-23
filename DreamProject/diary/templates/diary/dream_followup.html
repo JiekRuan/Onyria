@@ -1,7 +1,13 @@
-{% extends "diary/base.html" %} {% load static %} {% block title %}Suivi de mes
-rêves{% endblock %} {% block content %}
+{% extends "diary/base.html" %} 
+{% load static %} 
+
+{% block title %}Suivi de mes rêves{% endblock %} 
+
+{% block content %}
+
+<!-- En-tête principal -->
 <div class="text-center mb-8">
-  <h1 class="text-3xl text-black mb-4">Suivi de mes rêves</h1>
+  <h1 class="text-3xl text-black mb-2">Suivi de mes rêves</h1>
   <p class="text-gray-600 text-sm">
     Analysez l'évolution de vos rêves et découvrez vos patterns oniriques
   </p>
@@ -9,31 +15,140 @@ rêves{% endblock %} {% block content %}
 
 {% if has_data %}
 
-<!-- Section 1: Suivi du type de rêve -->
-<div class="mb-12">
+<!-- Section 1: Types de rêves avec bouton filtrer amélioré -->
+<div class="mb-8">
+  <!-- Bouton Filtrer amélioré -->
+  <div class="relative inline-block mb-8">
+    <button id="filterToggle" class="btn-filter">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z"></path>
+      </svg>
+      Filtrer les données
+      <svg class="w-4 h-4 chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+      </svg>
+    </button>
+    
+    <!-- Menu déroulant -->
+    <div id="filterDropdown" class="filter-dropdown absolute top-full left-0 mt-3">
+      <!-- Section Période -->
+      <div class="mb-6">
+        <label class="filter-section-label">
+            Période d'analyse
+        </label>
+        <select id="periodSelect" class="filter-select">
+          <option value="all" {% if current_period == 'all' %}selected{% endif %}>Toutes les données disponibles</option>
+          <option value="month" {% if current_period == 'month' %}selected{% endif %}>30 derniers jours</option>
+          <option value="3months" {% if current_period == '3months' %}selected{% endif %}>3 derniers mois</option>
+          <option value="6months" {% if current_period == '6months' %}selected{% endif %}>6 derniers mois</option>
+          <option value="1year" {% if current_period == '1year' %}selected{% endif %}>Dernière année</option>
+          <option value="custom" {% if current_period == 'custom' %}selected{% endif %}>Période personnalisée</option>
+        </select>
+      </div>
+      
+      <!-- Champs dates personnalisées -->
+      <div id="customDateRange" class="mb-6 {% if current_period != 'custom' %}hidden{% endif %}">
+        <label class="filter-section-label">
+            Dates personnalisées
+        </label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <input type="date" id="startDate" class="filter-input" 
+                   value="{{ current_start_date|default:'' }}"
+                   placeholder="Date de début">
+            <div class="text-xs text-gray-500 mt-1 px-1">Date de début</div>
+          </div>
+          <div>
+            <input type="date" id="endDate" class="filter-input" 
+                   value="{{ current_end_date|default:'' }}"
+                   placeholder="Date de fin">
+            <div class="text-xs text-gray-500 mt-1 px-1">Date de fin</div>
+          </div>
+        </div>
+        <button id="applyCustomFilter" class="btn-apply">
+            Appliquer la sélection
+        </button>
+      </div>
+      
+      <!-- Divider -->
+      <div class="filter-divider"></div>
+      
+      <!-- Affichage période active -->
+      <div class="period-display">
+        <div class="period-display-text">
+          <strong>Période active :</strong> {{ date_range_display }}
+          <br>
+          <span class="opacity-75">{{ dream_type_stats.total }} rêve{{ dream_type_stats.total|pluralize }} analysé{{ dream_type_stats.total|pluralize }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">
     Types de rêves
   </h2>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Graphique pourcentages -->
     <div class="pastel-vanilla">
-      <h3 class="text-lg font-medium mb-4 text-center">Répartition globale</h3>
-      <div class="h-64">
-        <canvas id="dreamTypePieChart"></canvas>
+      <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-4 text-center">Répartition globale</h3>
+      <div class="h-64 flex items-center justify-center">
+        <canvas id="dreamTypePieChart" class="max-w-full max-h-full"></canvas>
+      </div>
+      <div class="mt-4 text-xs sm:text-sm text-gray-600 text-center">
+        Total : {{ dream_type_stats.total }} rêve{{ dream_type_stats.total|pluralize }}
       </div>
     </div>
 
     <!-- Graphique temporalité -->
     <div class="pastel-baby-powder">
-      <h3 class="text-lg font-medium mb-4 text-center">
+      <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-4 text-center">
         Évolution dans le temps
       </h3>
-      <div class="h-64">
-        <canvas id="dreamTypeTimelineChart"></canvas>
+      <div class="h-64 flex items-center justify-center">
+        <canvas id="dreamTypeTimelineChart" class="max-w-full max-h-full"></canvas>
       </div>
-      <div class="mt-4 text-sm text-gray-600 text-center">
+      <div class="mt-4 text-xs sm:text-sm text-gray-600 text-center">
         Évolution par jour
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Séparateur -->
+<hr class="border-t border-[#ede9f9] mb-8">
+
+<!-- Section 2: Émotions dominantes -->
+<div class="mb-8">
+  <h2 class="text-2xl font-semibold text-gray-800 mb-6 text-center">
+    Émotions dominantes
+  </h2>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Graphique pourcentages émotions -->
+    <div class="pastel-champagne">
+      <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-4 text-center">
+        Répartition des émotions
+      </h3>
+      <div class="h-64 flex items-center justify-center">
+        <canvas id="emotionsPieChart" class="max-w-full max-h-full"></canvas>
+      </div>
+      <div class="mt-4 text-xs sm:text-sm text-gray-600 text-center">
+        {{ emotions_stats|length }} émotion{{ emotions_stats|length|pluralize }}
+        identifiée{{ emotions_stats|length|pluralize }}
+      </div>
+    </div>
+
+    <!-- Graphique temporalité émotions -->
+    <div class="pastel-yellow">
+      <h3 class="text-sm sm:text-base md:text-lg font-semibold mb-4 text-center">
+        Évolution émotionnelle
+      </h3>
+      <div class="h-64 flex items-center justify-center">
+        <canvas id="emotionsTimelineChart" class="max-w-full max-h-full"></canvas>
+      </div>
+      <div class="mt-4 text-xs sm:text-sm text-gray-600 text-center">
+        Humeurs au fil du temps
       </div>
     </div>
   </div>
@@ -49,9 +164,7 @@ rêves{% endblock %} {% block content %}
         aria-hidden="true"
         alt=""
       />
-      <span class="ai-disclaimer__title"
-        >Avertissement sur les statistiques</span
-      >
+      <span class="ai-disclaimer__title">Avertissement sur les statistiques</span>
     </summary>
     <div class="ai-disclaimer__content">
       <p>
@@ -60,7 +173,7 @@ rêves{% endblock %} {% block content %}
         vos patterns oniriques mais ne constituent pas un diagnostic médical ou
         psychologique.
       </p>
-      <p class="mt-1">
+      <p class="mt-2">
         L'interprétation de ces données doit se faire avec prudence et ne
         remplace en aucun cas l'avis d'un professionnel de santé.
       </p>
@@ -73,44 +186,670 @@ rêves{% endblock %} {% block content %}
 <!-- Message si pas de données -->
 <div class="text-center py-12">
   <div class="pastel-baby-powder max-w-md mx-auto">
-    <h3 class="text-xl font-medium mb-4">Pas encore de données</h3>
-    <p class="text-gray-600 mb-6">
-      Enregistrez quelques rêves pour voir apparaître vos statistiques
-      personnalisées !
+    <h3 class="text-lg sm:text-xl font-semibold mb-4">
+      {% if current_period != 'all' %}
+        Pas de données pour cette période
+      {% else %}
+        Pas encore de données
+      {% endif %}
+    </h3>
+    <p class="text-xs sm:text-sm text-gray-600 mb-6 leading-relaxed">
+      {% if current_period != 'all' %}
+        Aucun rêve trouvé pour la période sélectionnée. Essayez d'élargir la plage de dates.
+      {% else %}
+        Enregistrez quelques rêves pour voir apparaître vos statistiques personnalisées !
+      {% endif %}
     </p>
+    {% if current_period != 'all' %}
+      <button class="btn-ballon-sm mr-2" onclick="applyFilter('all')">
+        Voir toutes les données
+      </button>
+    {% endif %}
     <a href="{% url 'dream_recorder' %}" class="btn-ballon-sm">
-      Enregistrer mon premier rêve
+      Enregistrer un rêve
     </a>
   </div>
 </div>
 
 {% endif %}
 
-<!-- Scripts pour les graphiques -->
+<!-- CSS pour les filtres améliorés -->
+<style>
+/* Styles pour le bouton filtrer amélioré */
+.btn-filter {
+  color: var(--brand-800);
+  border-color: var(--brand-400);
+  background-image: linear-gradient(to bottom, var(--brand-75), var(--brand-200));
+  box-shadow: var(--shadow-inset-btn-sm);
+  transition: all 0.2s ease;
+  font-weight: 600;
+  border-width: 1.5px;
+  border-style: solid;
+  border-radius: 9999px;
+  padding: 0.625rem 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  font-family: 'Schibsted Grotesk', sans-serif;
+  cursor: pointer;
+}
+
+.btn-filter:hover {
+  background-image: linear-gradient(to bottom, var(--brand-100), var(--brand-300));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-inset-btn);
+}
+
+.btn-filter:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-inset-btn-sm);
+}
+
+/* Animation du chevron */
+.btn-filter .chevron-icon {
+  transition: transform 0.2s ease;
+}
+
+.btn-filter.active .chevron-icon {
+  transform: rotate(180deg);
+}
+
+/* Menu déroulant amélioré */
+.filter-dropdown {
+  background: white;
+  border-radius: 1.5rem;
+  border: 1.5px solid var(--brand-400);
+  box-shadow: var(--shadow-inset-card), 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  padding: 1.5rem;
+  min-width: 24rem;
+  z-index: 50;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  transition: all 0.2s ease-out;
+  pointer-events: none;
+}
+
+.filter-dropdown.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Labels de section */
+.filter-section-label {
+  color: var(--brand-800);
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+  display: block;
+  font-family: 'Schibsted Grotesk', sans-serif;
+}
+
+/* Styles pour les selects améliorés */
+.filter-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--purple-200);
+  border-radius: 0.75rem;
+  background: white;
+  color: var(--gray-700);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%234e3f86' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25em 1.25em;
+  padding-right: 3rem;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  font-family: 'Schibsted Grotesk', sans-serif;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--brand-300);
+  box-shadow: 0 0 0 3px rgba(184, 168, 236, 0.1), inset 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* Styles pour les inputs de date améliorés */
+.filter-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--purple-200);
+  border-radius: 0.75rem;
+  background: white;
+  color: var(--gray-700);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  font-family: 'Schibsted Grotesk', sans-serif;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: var(--brand-300);
+  box-shadow: 0 0 0 3px rgba(184, 168, 236, 0.1), inset 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.filter-input::placeholder {
+  color: var(--gray-400);
+  font-weight: 400;
+}
+
+/* Bouton d'application amélioré */
+.btn-apply {
+  color: var(--brand-800);
+  border-color: var(--brand-400);
+  background-image: linear-gradient(to bottom, var(--brand-75), var(--brand-200));
+  box-shadow: var(--shadow-inset-btn-sm);
+  transition: all 0.2s ease;
+  font-weight: 600;
+  border-width: 1.5px;
+  border-style: solid;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  width: 100%;
+  margin-top: 1rem;
+  font-family: 'Schibsted Grotesk', sans-serif;
+  cursor: pointer;
+}
+
+.btn-apply:hover {
+  background-image: linear-gradient(to bottom, var(--brand-100), var(--brand-300));
+  transform: translateY(-1px);
+}
+
+.btn-apply:active {
+  transform: translateY(0);
+}
+
+/* Zone d'affichage de la période */
+.period-display {
+  background-color: var(--brand-50);
+  border: 1px solid var(--brand-200);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.period-display-text {
+  color: var(--brand-800);
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: 'Schibsted Grotesk', sans-serif;
+}
+
+/* Divider */
+.filter-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--brand-200), transparent);
+  margin: 1rem 0;
+}
+
+/* États d'erreur pour les dates */
+.filter-input.error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Responsive amélioré */
+@media (max-width: 768px) {
+  .filter-dropdown {
+    min-width: 20rem;
+    left: 0 !important;
+    right: 1rem;
+  }
+  
+  .btn-filter {
+    font-size: 0.875rem;
+    padding: 0.5rem 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-dropdown {
+    min-width: 18rem;
+    max-width: calc(100vw - 2rem);
+    padding: 1.25rem;
+  }
+  
+  .btn-filter {
+    font-size: 0.8125rem;
+    padding: 0.5rem 1rem;
+  }
+  
+  .filter-section-label {
+    font-size: 0.8125rem;
+  }
+  
+  .filter-select, .filter-input {
+    font-size: 0.8125rem;
+    padding: 0.625rem 0.875rem;
+  }
+  
+  .filter-select {
+    padding-right: 2.75rem;
+  }
+}
+
+/* Animation d'apparition progressive */
+.filter-dropdown {
+  animation-duration: 0.2s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.filter-dropdown.show {
+  animation-name: slideInDown;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+</style>
+
+<!-- Scripts pour les graphiques et filtres -->
 <script src="{% static 'js/chart.min.js' %}"></script>
-{% if has_data %}
 <script>
-  // Configuration des couleurs pour cohérence visuelle
-  const colors = {
-    reve: '#B3E5FC',
-    cauchemar: '#F4B6B6',
+// Gestion améliorée des filtres
+document.addEventListener('DOMContentLoaded', function() {
+  const filterToggle = document.getElementById('filterToggle');
+  const filterDropdown = document.getElementById('filterDropdown');
+  const periodSelect = document.getElementById('periodSelect');
+  const customDateRange = document.getElementById('customDateRange');
+  const applyCustomBtn = document.getElementById('applyCustomFilter');
+  const startInput = document.getElementById('startDate');
+  const endInput = document.getElementById('endDate');
+
+  // Toggle du menu déroulant avec animations améliorées
+  if (filterToggle && filterDropdown) {
+    filterToggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      
+      if (filterDropdown.classList.contains('show')) {
+        // Fermer avec animation
+        filterDropdown.classList.remove('show');
+        filterToggle.classList.remove('active');
+      } else {
+        // Ouvrir avec animation
+        filterDropdown.classList.add('show');
+        filterToggle.classList.add('active');
+      }
+    });
+
+    // Fermer le menu en cliquant à l'extérieur
+    document.addEventListener('click', function(e) {
+      if (!filterDropdown.contains(e.target) && !filterToggle.contains(e.target)) {
+        filterDropdown.classList.remove('show');
+        filterToggle.classList.remove('active');
+      }
+    });
+
+    // Empêcher la fermeture en cliquant dans le menu
+    filterDropdown.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+
+    // Fermer avec Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && filterDropdown.classList.contains('show')) {
+        filterDropdown.classList.remove('show');
+        filterToggle.classList.remove('active');
+        filterToggle.focus();
+      }
+    });
   }
 
-  // Données des graphiques depuis Django
-  const dreamTypeStats = {{ dream_type_stats|safe }};
-  const dreamTypeTimeline = {{ dream_type_timeline|safe }};
+  // Gestion du changement de période
+  if (periodSelect) {
+    periodSelect.addEventListener('change', function() {
+      const selectedPeriod = this.value;
+      
+      if (selectedPeriod === 'custom') {
+        customDateRange.classList.remove('hidden');
+        // Focus sur le premier champ de date
+        setTimeout(() => {
+          if (startInput) startInput.focus();
+        }, 100);
+      } else {
+        customDateRange.classList.add('hidden');
+        applyFilter(selectedPeriod);
+      }
+    });
+  }
 
-  // 1. Graphique en secteurs - Types de rêves
-  const ctxPie = document.getElementById('dreamTypePieChart').getContext('2d');
-  new Chart(ctxPie, {
+  // Application du filtre personnalisé avec validation améliorée
+  if (applyCustomBtn) {
+    applyCustomBtn.addEventListener('click', function() {
+      const startDate = startInput.value;
+      const endDate = endInput.value;
+      
+      // Réinitialiser les styles d'erreur
+      startInput.classList.remove('error');
+      endInput.classList.remove('error');
+      
+      if (!startDate || !endDate) {
+        showNotification('⚠️ Veuillez sélectionner une date de début et une date de fin.', 'warning');
+        if (!startDate) startInput.classList.add('error');
+        if (!endDate) endInput.classList.add('error');
+        return;
+      }
+      
+      if (new Date(startDate) > new Date(endDate)) {
+        showNotification('⚠️ La date de début doit être antérieure à la date de fin.', 'error');
+        startInput.classList.add('error');
+        endInput.classList.add('error');
+        return;
+      }
+      
+      // Vérifier que les dates ne sont pas dans le futur
+      const today = new Date();
+      if (new Date(endDate) > today) {
+        showNotification('⚠️ La date de fin ne peut pas être dans le futur.', 'warning');
+        endInput.classList.add('error');
+        return;
+      }
+      
+      showNotification('✅ Filtre appliqué avec succès !', 'success');
+      applyCustomFilter(startDate, endDate);
+    });
+  }
+
+  // Validation en temps réel des dates avec feedback visuel
+  if (startInput && endInput) {
+    [startInput, endInput].forEach(input => {
+      input.addEventListener('change', function() {
+        validateDateInputs();
+      });
+      
+      input.addEventListener('blur', function() {
+        validateDateInputs();
+      });
+    });
+  }
+
+  // Fonction de validation des dates
+  function validateDateInputs() {
+    const startDate = startInput.value;
+    const endDate = endInput.value;
+    
+    // Réinitialiser les styles
+    startInput.classList.remove('error');
+    endInput.classList.remove('error');
+    
+    if (startDate && endDate) {
+      if (new Date(startDate) > new Date(endDate)) {
+        startInput.classList.add('error');
+        endInput.classList.add('error');
+      }
+    }
+    
+    // Vérifier les dates futures
+    const today = new Date();
+    if (startDate && new Date(startDate) > today) {
+      startInput.classList.add('error');
+    }
+    if (endDate && new Date(endDate) > today) {
+      endInput.classList.add('error');
+    }
+  }
+
+  // Fonction pour afficher des notifications
+  function showNotification(message, type = 'info') {
+    // Créer l'élément notification s'il n'existe pas
+    let notification = document.getElementById('filterNotification');
+    if (!notification) {
+      notification = document.createElement('div');
+      notification.id = 'filterNotification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-family: 'Schibsted Grotesk', sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transition: all 0.3s ease;
+        transform: translateX(100%);
+        opacity: 0;
+      `;
+      document.body.appendChild(notification);
+    }
+    
+    // Styles selon le type
+    const styles = {
+      success: { bg: '#10b981', color: '#ffffff' },
+      warning: { bg: '#f59e0b', color: '#ffffff' },
+      error: { bg: '#ef4444', color: '#ffffff' },
+      info: { bg: 'var(--brand-200)', color: 'var(--brand-800)' }
+    };
+    
+    const style = styles[type] || styles.info;
+    notification.style.backgroundColor = style.bg;
+    notification.style.color = style.color;
+    notification.textContent = message;
+    
+    // Afficher la notification
+    notification.style.transform = 'translateX(0)';
+    notification.style.opacity = '1';
+    
+    // Masquer après 3 secondes
+    setTimeout(() => {
+      notification.style.transform = 'translateX(100%)';
+      notification.style.opacity = '0';
+    }, 3000);
+  }
+});
+
+// Fonctions pour appliquer les filtres (à connecter avec votre backend Django)
+function applyFilter(period) {
+  const url = new URL(window.location);
+  url.searchParams.set('period', period);
+  url.searchParams.delete('start_date');
+  url.searchParams.delete('end_date');
+  window.location.href = url.toString();
+}
+
+function applyCustomFilter(startDate, endDate) {
+  const url = new URL(window.location);
+  url.searchParams.set('period', 'custom');
+  url.searchParams.set('start_date', startDate);
+  url.searchParams.set('end_date', endDate);
+  window.location.href = url.toString();
+}
+
+{% if has_data %}
+// Configuration des couleurs pour cohérence visuelle avec contraste amélioré
+const colors = {
+  reve: '#4e3f86',      // Votre couleur brand principale pour les rêves
+  cauchemar: '#E6C98C',  // Couleur pastel-yellow plus foncée pour les cauchemars
+  emotions: [
+    '#4e3f86', '#E6C98C', '#D8D3C3', '#c7a96b',
+    '#9a8472', '#b5a491', '#8b7355', '#a69684'
+  ]
+};
+
+// Données des graphiques depuis Django
+const dreamTypeStats = {{ dream_type_stats|safe }};
+const dreamTypeTimeline = {{ dream_type_timeline|safe }};
+const emotionsStats = {{ emotions_stats|safe }};
+const emotionsTimeline = {{ emotions_timeline|safe }};
+const emotionsList = {{ emotions_list|safe }};
+
+// Configuration Chart.js par défaut
+Chart.defaults.font.family = "'Schibsted Grotesk', sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+Chart.defaults.plugins.legend.labels.padding = 15;
+
+// 1. Graphique en secteurs - Types de rêves
+const ctxPie = document.getElementById('dreamTypePieChart').getContext('2d');
+new Chart(ctxPie, {
+  type: 'pie',
+  data: {
+    labels: ['Rêves', 'Cauchemars'],
+    datasets: [{
+      data: [dreamTypeStats.percentages.rêve, dreamTypeStats.percentages.cauchemar],
+      backgroundColor: [colors.reve, colors.cauchemar],
+      borderWidth: 2,
+      borderColor: '#ffffff',
+      hoverBorderWidth: 3,
+      hoverOffset: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 20,
+          font: { size: 13, weight: '500' },
+          color: '#374151'
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        borderColor: '#d1d5db',
+        borderWidth: 1,
+        cornerRadius: 8,
+        displayColors: true,
+        callbacks: {
+          label: function(context) {
+            return context.label + ': ' + context.parsed + '%';
+          }
+        }
+      }
+    },
+    layout: {
+      padding: 20
+    }
+  }
+});
+
+// 2. Graphique timeline - Types de rêves
+const ctxTimeline = document.getElementById('dreamTypeTimelineChart').getContext('2d');
+new Chart(ctxTimeline, {
+  type: 'line',
+  data: {
+    labels: dreamTypeTimeline.map(d => new Date(d.date).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit'
+    })),
+    datasets: [{
+      label: 'Rêves',
+      data: dreamTypeTimeline.map(d => d.rêve),
+      borderColor: colors.reve,
+      backgroundColor: colors.reve + '30',
+      borderWidth: 3,
+      tension: 0.4,
+      fill: false,
+      pointBackgroundColor: colors.reve,
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7
+    }, {
+      label: 'Cauchemars',
+      data: dreamTypeTimeline.map(d => d.cauchemar),
+      borderColor: colors.cauchemar,
+      backgroundColor: colors.cauchemar + '30',
+      borderWidth: 3,
+      tension: 0.4,
+      fill: false,
+      pointBackgroundColor: colors.cauchemar,
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      intersect: false,
+      mode: 'index'
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { 
+          stepSize: 1,
+          color: '#6b7280'
+        },
+        grid: {
+          color: '#f3f4f6'
+        }
+      },
+      x: {
+        ticks: {
+          color: '#6b7280'
+        },
+        grid: {
+          color: '#f3f4f6'
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { 
+          padding: 20, 
+          font: { size: 13, weight: '500' },
+          color: '#374151'
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        borderColor: '#d1d5db',
+        borderWidth: 1,
+        cornerRadius: 8
+      }
+    },
+    layout: {
+      padding: 15
+    }
+  }
+});
+
+// 3. Graphique en secteurs - Émotions
+if (Object.keys(emotionsStats).length > 0) {
+  const ctxEmotions = document.getElementById('emotionsPieChart').getContext('2d');
+  const emotionLabels = Object.keys(emotionsStats);
+  const emotionData = emotionLabels.map(label => emotionsStats[label].percentage);
+
+  new Chart(ctxEmotions, {
     type: 'pie',
     data: {
-      labels: ['Rêves', 'Cauchemars'],
+      labels: emotionLabels,
       datasets: [{
-        data: [dreamTypeStats.percentages.rêve, dreamTypeStats.percentages.cauchemar],
-        backgroundColor: [colors.reve, colors.cauchemar],
-        borderWidth: 2,
-        borderColor: '#fff'
+        data: emotionData,
+        backgroundColor: colors.emotions.slice(0, emotionLabels.length),
+        borderWidth: 3,
+        borderColor: '#ffffff',
+        hoverBorderWidth: 4,
+        hoverOffset: 6
       }]
     },
     options: {
@@ -120,59 +859,114 @@ rêves{% endblock %} {% block content %}
         legend: {
           position: 'bottom',
           labels: {
-            padding: 20,
-            font: { size: 14 }
+            padding: 15,
+            font: { size: 11, weight: '500' },
+            color: '#374151'
           }
         },
         tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          borderColor: '#d1d5db',
+          borderWidth: 1,
+          cornerRadius: 8,
           callbacks: {
             label: function(context) {
               return context.label + ': ' + context.parsed + '%';
             }
           }
         }
+      },
+      layout: {
+        padding: 15
       }
     }
   });
+}
 
-  // 2. Graphique timeline - Types de rêves
-  const ctxTimeline = document.getElementById('dreamTypeTimelineChart').getContext('2d');
-  new Chart(ctxTimeline, {
+// 4. Graphique timeline - Émotions
+if (emotionsTimeline.length > 0 && emotionsList.length > 0) {
+  const ctxEmotionsTimeline = document.getElementById('emotionsTimelineChart').getContext('2d');
+
+  const datasets = emotionsList.map((emotion, index) => ({
+    label: emotion.label,
+    data: emotionsTimeline.map(d => d[emotion.key] || 0),
+    borderColor: colors.emotions[index % colors.emotions.length],
+    backgroundColor: colors.emotions[index % colors.emotions.length] + '30',
+    borderWidth: 3,
+    tension: 0.4,
+    fill: false,
+    pointBackgroundColor: colors.emotions[index % colors.emotions.length],
+    pointBorderColor: '#ffffff',
+    pointBorderWidth: 2,
+    pointRadius: 4,
+    pointHoverRadius: 6
+  }));
+
+  new Chart(ctxEmotionsTimeline, {
     type: 'line',
     data: {
-      labels: dreamTypeTimeline.map(d => new Date(d.date).toLocaleDateString('fr-FR')),
-      datasets: [{
-        label: 'Rêves',
-        data: dreamTypeTimeline.map(d => d.rêve),
-        borderColor: colors.reve,
-        backgroundColor: colors.reve + '40',
-        tension: 0.4,
-        fill: false
-      }, {
-        label: 'Cauchemars',
-        data: dreamTypeTimeline.map(d => d.cauchemar),
-        borderColor: colors.cauchemar,
-        backgroundColor: colors.cauchemar + '40',
-        tension: 0.4,
-        fill: false
-      }]
+      labels: emotionsTimeline.map(d => new Date(d.date).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit'
+      })),
+      datasets: datasets
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
       scales: {
         y: {
           beginAtZero: true,
-          ticks: { stepSize: 1 }
+          ticks: { 
+            stepSize: 1,
+            color: '#6b7280'
+          },
+          grid: {
+            color: '#f3f4f6'
+          }
+        },
+        x: {
+          ticks: {
+            color: '#6b7280'
+          },
+          grid: {
+            color: '#f3f4f6'
+          }
         }
       },
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { padding: 20, font: { size: 14 } }
+          labels: { 
+            padding: 12, 
+            font: { size: 10, weight: '500' },
+            color: '#374151'
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          borderColor: '#d1d5db',
+          borderWidth: 1,
+          cornerRadius: 8
         }
+      },
+      layout: {
+        padding: 15
       }
     }
   });
+}
+
+{% endif %}
+
 </script>
-{% endif %} {% endblock %}
+
+{% endblock %}
