@@ -1,3 +1,4 @@
+/* --- Déclarations de police (fichiers dans /static/Font/) --- */
 @font-face {
   font-family: 'Schibsted Grotesk';
   src: url('../Font/schibsted-grotesk-v6-latin-regular.woff2') format('woff2');
@@ -5,7 +6,6 @@
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Schibsted Grotesk';
   src: url('../Font/schibsted-grotesk-v6-latin-500.woff2') format('woff2');
@@ -21,9 +21,15 @@
   font-display: swap;
 }
 
+/* --- Tailwind --- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* --- Appliquer la police par défaut partout --- */
+@layer base {
+  html { @apply font-sans; }
+}
 
 /* ===== Design tokens ===== */
 :root{
