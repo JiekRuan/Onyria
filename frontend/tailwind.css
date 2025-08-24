@@ -1,3 +1,4 @@
+/* --- Déclarations de police (fichiers dans /static/Font/) --- */
 @font-face {
   font-family: 'Schibsted Grotesk';
   src: url('../Font/schibsted-grotesk-v6-latin-regular.woff2') format('woff2');
@@ -5,7 +6,6 @@
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Schibsted Grotesk';
   src: url('../Font/schibsted-grotesk-v6-latin-500.woff2') format('woff2');
@@ -21,9 +21,15 @@
   font-display: swap;
 }
 
+/* --- Tailwind --- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* --- Appliquer la police par défaut partout --- */
+@layer base {
+  html { @apply font-sans; }
+}
 
 /* ===== Design tokens ===== */
 :root{
@@ -58,7 +64,7 @@
   
   /* Gestion des placeholders */
   ::placeholder {
-    color: var(--gray-400) !important;
+    color: var(--gray-400);
     opacity: 1;
     font-weight: 400;
   }
@@ -147,7 +153,7 @@
     @apply btn-ballon-base w-20 h-20 rounded-full flex items-center justify-center cursor-pointer;
   }
   .btn-ballon-record.recording{ @apply animate-pulse; }
-  .btn-ballon-record.processing{ @apply opacity-75; }
+  .btn-ballon-record.processing{ @apply opacity-75 mb-8; }
 
   /* ===== BG utilitaire legacy ===== */
   .bg-pastel-baby-powder{ background-color:#FDFBF7; }
@@ -256,9 +262,9 @@
 
 /* ===== Responsive sidebar ===== */
 @media (max-width:1279px){
-  .sidebar{ @apply hidden !important; }
-  .content-area{ margin-left:0 !important; }
+  .sidebar{ @apply hidden }
+  .content-area{ margin-left:0; }
 }
 @media (min-width:1280px){
-  .content-area{ margin-left:16rem !important; } /* 256px */
+  .content-area{ margin-left:16rem; } /* 256px */
 }

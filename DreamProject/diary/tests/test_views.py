@@ -17,10 +17,27 @@ from django.http import Http404
 from unittest.mock import patch, MagicMock
 import json
 import tempfile
+import time
 
 from ..models import Dream
+from ..constants import DREAM_ERROR_MESSAGE
 
 User = get_user_model()
+
+
+# --- Helper module-level pour parser les événements SSE (utilisé par quelques tests) ---
+def _sse_events_from_response(response):
+    """Retourne la liste des événements SSE (dict) à partir d'une StreamingHttpResponse."""
+    content = b"".join(response.streaming_content).decode("utf-8", errors="ignore")
+    events = []
+    for line in content.strip().split("\n"):
+        if line.startswith("data: "):
+            payload = line[6:]
+            try:
+                events.append(json.loads(payload))
+            except json.JSONDecodeError:
+                continue
+    return events
 
 
 class DreamDiaryViewTest(TestCase):
@@ -321,15 +338,267 @@ class DreamRecorderViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class AnalyseFromVoiceViewTest(TestCase):
+class DreamFollowupViewTest(TestCase):
     """
-    Tests de la vue analyse_from_voice (API).
+    Tests de la vue dream_followup avec filtres temporels.
     
     Cette classe teste :
-    - API d'analyse vocale complète
-    - Gestion des erreurs et codes de réponse
-    - Validation des paramètres
-    - Formats de réponse JSON
+    - Rendu correct de la page dashboard
+    - Gestion des paramètres de filtre
+    - Contexte passé au template
+    - Gestion des cas d'erreur
+    """
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='followup@example.com',
+            username='followup_user',
+            password='testpass123'
+        )
+        self.client = Client()
+
+        # Créer quelques rêves pour les tests
+        self._create_test_dreams()
+
+    def _create_test_dreams(self):
+        """Créer des données de test"""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        base_date = timezone.now()
+        
+        # Rêve récent
+        recent_dream = Dream.objects.create(
+            user=self.user,
+            transcription="Rêve récent pour dashboard",
+            dream_type="rêve",
+            dominant_emotion="joie",
+            is_analyzed=True
+        )
+        
+        # Rêve ancien
+        old_dream = Dream.objects.create(
+            user=self.user,
+            transcription="Rêve ancien pour dashboard",
+            dream_type="cauchemar",
+            dominant_emotion="peur",
+            is_analyzed=True
+        )
+        old_dream.created_at = base_date - timedelta(days=100)
+        old_dream.save()
+
+    def test_dream_followup_view_requires_login(self):
+        """Test que la vue dream_followup requiert une authentification"""
+        response = self.client.get(reverse('dream_followup'))
+        
+        # Doit rediriger vers login
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login', response.url.lower())
+
+    def test_dream_followup_view_default(self):
+        """Test de la vue avec paramètres par défaut (toutes les données)"""
+        self.client.login(email='followup@example.com', password='testpass123')
+        
+        response = self.client.get(reverse('dream_followup'))
+        
+        # Vérifications de base
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'diary/dream_followup.html')
+        
+        # Vérifier le contexte
+        self.assertIn('dream_type_stats', response.context)
+        self.assertIn('emotions_stats', response.context)
+        self.assertIn('has_data', response.context)
+        self.assertIn('current_period', response.context)
+        
+        # Par défaut, période = 'all'
+        self.assertEqual(response.context['current_period'], 'all')
+        self.assertTrue(response.context['has_data'])  # On a des rêves
+
+    def test_dream_followup_view_with_period_filter(self):
+        """Test de la vue avec filtre de période"""
+        self.client.login(email='followup@example.com', password='testpass123')
+        
+        response = self.client.get(reverse('dream_followup'), {'period': 'month'})
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['current_period'], 'month')
+        
+        # Les stats doivent refléter le filtre
+        stats = response.context['dream_type_stats']
+        # Seulement 1 rêve récent dans les 30 derniers jours
+        self.assertEqual(stats['total'], 1)
+
+    def test_dream_followup_view_with_custom_dates(self):
+        """Test de la vue avec dates personnalisées"""
+        self.client.login(email='followup@example.com', password='testpass123')
+        
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # Dates qui incluent seulement le rêve récent
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=7)
+        
+        response = self.client.get(reverse('dream_followup'), {
+            'start_date': start_date.strftime('%Y-%m-%d'),
+            'end_date': end_date.strftime('%Y-%m-%d')
+        })
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['current_start_date'], start_date.strftime('%Y-%m-%d'))
+        self.assertEqual(response.context['current_end_date'], end_date.strftime('%Y-%m-%d'))
+
+    def test_dream_followup_view_context_completeness(self):
+        """Test de complétude du contexte"""
+        self.client.login(email='followup@example.com', password='testpass123')
+        
+        response = self.client.get(reverse('dream_followup'))
+        
+        # Toutes les clés de contexte requises
+        required_context_keys = [
+            'dream_type_stats',
+            'dream_type_timeline', 
+            'emotions_stats',
+            'emotions_timeline',
+            'emotions_list',
+            'has_data',
+            'current_period',
+            'date_range_display'
+        ]
+        
+        for key in required_context_keys:
+            self.assertIn(key, response.context, f"Clé manquante: {key}")
+
+    def test_dream_followup_view_no_dreams(self):
+        """Test de la vue avec utilisateur sans rêves"""
+        # Supprimer les rêves de test
+        Dream.objects.filter(user=self.user).delete()
+        
+        self.client.login(email='followup@example.com', password='testpass123')
+        
+        response = self.client.get(reverse('dream_followup'))
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context['has_data'])
+        
+        # Les stats doivent être vides mais présentes
+        stats = response.context['dream_type_stats']
+        self.assertEqual(stats['total'], 0)
+
+    def test_dream_followup_view_emotions_formatting(self):
+        """Test du formatage des émotions dans le contexte"""
+        self.client.login(email='followup@example.com', password='testpass123')
+        
+        response = self.client.get(reverse('dream_followup'))
+        
+        emotions_stats = response.context['emotions_stats']
+        
+        # Vérifier que les émotions sont formatées en français
+        emotion_labels = list(emotions_stats.keys())
+        
+        # "joie" devrait être formaté en "Joie", "peur" en "Peur"
+        self.assertIn('Joie', emotion_labels)
+        self.assertIn('Peur', emotion_labels)
+        
+        # Vérifier la structure des données
+        for emotion_label, data in emotions_stats.items():
+            self.assertIn('percentage', data)
+            self.assertIn('count', data)
+            self.assertIsInstance(data['percentage'], float)
+            self.assertIsInstance(data['count'], int)
+
+    def test_dream_followup_view_date_range_display(self):
+        """Test de l'affichage de la plage de dates"""
+        self.client.login(email='followup@example.com', password='testpass123')
+        
+        # Test avec période prédéfinie
+        response = self.client.get(reverse('dream_followup'), {'period': 'month'})
+        self.assertEqual(response.context['date_range_display'], 'Les 30 derniers jours')
+        
+        # Test avec dates personnalisées
+        response = self.client.get(reverse('dream_followup'), {
+            'start_date': '2024-01-01',
+            'end_date': '2024-01-31'
+        })
+        self.assertIn('Du 01/01/2024 au 31/01/2024', response.context['date_range_display'])
+
+    def test_dream_followup_view_user_isolation(self):
+        """Test d'isolation des données utilisateur"""
+        # Créer un autre utilisateur avec des rêves
+        other_user = User.objects.create_user(
+            email='other_followup@example.com',
+            username='other_followup_user',
+            password='testpass123'
+        )
+        
+        Dream.objects.create(
+            user=other_user,
+            transcription="Rêve de l'autre utilisateur",
+            dream_type="rêve",
+            dominant_emotion="bonheur",
+            is_analyzed=True
+        )
+        
+        self.client.login(email='followup@example.com', password='testpass123')
+        response = self.client.get(reverse('dream_followup'))
+        
+        # Les stats ne doivent inclure que les rêves de notre utilisateur
+        stats = response.context['dream_type_stats']
+        self.assertEqual(stats['total'], 2)  # Nos 2 rêves seulement
+        
+        # L'émotion "bonheur" de l'autre utilisateur ne doit pas apparaître
+        emotions_stats = response.context['emotions_stats']
+        self.assertNotIn('Bonheur', emotions_stats.keys())
+
+    def test_dream_followup_view_template_content(self):
+        """Test du contenu rendu dans le template"""
+        self.client.login(email='followup@example.com', password='testpass123')
+        
+        response = self.client.get(reverse('dream_followup'))
+        
+        # Vérifier la présence d'éléments clés dans le HTML
+        self.assertContains(response, 'Suivi de mes rêves')
+        self.assertContains(response, 'Types de rêves')
+        self.assertContains(response, 'Émotions dominantes')
+        
+        # Si Chart.js est inclus
+        self.assertContains(response, 'chart.min.js')
+
+    def test_dream_followup_view_performance(self):
+        """Test de performance de la vue"""
+        # Créer beaucoup de rêves
+        batch_dreams = []
+        for i in range(50):
+            batch_dreams.append(Dream(
+                user=self.user,
+                transcription=f"Rêve perf {i}",
+                dream_type="rêve" if i % 2 == 0 else "cauchemar",
+                dominant_emotion="joie",
+                is_analyzed=True
+            ))
+        Dream.objects.bulk_create(batch_dreams)
+        
+        self.client.login(email='followup@example.com', password='testpass123')
+        
+        start_time = time.time()
+        response = self.client.get(reverse('dream_followup'))
+        execution_time = time.time() - start_time
+        
+        # Doit rester rapide
+        self.assertLess(execution_time, 2.0)
+        self.assertEqual(response.status_code, 200)
+
+class AnalyseFromVoiceViewTest(TestCase):
+    """
+    Tests de la vue analyse_from_voice (API SSE).
+    
+    Cette classe teste :
+    - API d'analyse vocale avec Server-Sent Events
+    - Séquence progressive des événements
+    - Gestion des erreurs à chaque étape
+    - Format des événements SSE
+    - Headers de streaming appropriés
     """
     
     def setUp(self):
@@ -340,11 +609,24 @@ class AnalyseFromVoiceViewTest(TestCase):
         )
         self.client = Client()
 
+    def _parse_sse_events(self, content):
+        """Parse les événements SSE pour les tests de vues"""
+        events = []
+        lines = content.strip().split('\n')
+        for line in lines:
+            if line.startswith('data: '):
+                try:
+                    event_data = json.loads(line[6:])
+                    events.append(event_data)
+                except json.JSONDecodeError:
+                    continue
+        return events
+
     def test_analyse_from_voice_requires_login(self):
         """
-        Test que l'API analyse_from_voice requiert une authentification.
+        Test que l'API SSE requiert une authentification.
         
-        Objectif : Vérifier la sécurité de l'API
+        Objectif : Vérifier la sécurité de l'API SSE
         """
         with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
             audio_file.write(b'fake_audio_data')
@@ -359,30 +641,44 @@ class AnalyseFromVoiceViewTest(TestCase):
 
     def test_analyse_from_voice_requires_post(self):
         """
-        Test que l'API n'accepte que les requêtes POST.
+        Test que l'API SSE n'accepte que les requêtes POST.
         
         Objectif : Vérifier la méthode HTTP correcte
         """
         self.client.login(email='api@example.com', password='testpass123')
         
-        # GET non autorisé
         response = self.client.get(reverse('analyse_from_voice'))
         self.assertEqual(response.status_code, 405)  # Method Not Allowed
 
-    def test_analyse_from_voice_no_audio_file(self):
+    def test_analyse_from_voice_headers(self):
         """
-        Test de l'API sans fichier audio.
+        Test des headers SSE appropriés.
         
-        Objectif : Vérifier la validation des paramètres
+        Objectif : Vérifier les headers de streaming
         """
         self.client.login(email='api@example.com', password='testpass123')
         
         response = self.client.post(reverse('analyse_from_voice'))
         
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.content)
-        self.assertFalse(data['success'])
-        self.assertEqual(data['error'], 'Pas de fichier audio transmis')
+        self.assertEqual(response['Content-Type'], 'text/event-stream')
+        self.assertEqual(response['Cache-Control'], 'no-cache')
+
+    def test_analyse_from_voice_no_audio_file(self):
+        """
+        Test de l'API SSE sans fichier audio.
+        
+        Objectif : Vérifier la validation des paramètres en mode SSE
+        """
+        self.client.login(email='api@example.com', password='testpass123')
+        
+        response = self.client.post(reverse('analyse_from_voice'))
+        
+        content = b''.join(response.streaming_content).decode('utf-8')
+        events = self._parse_sse_events(content)
+        
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]['step'], 'error')
+        self.assertIn('message', events[0])
 
     @patch('diary.views.transcribe_audio')
     @patch('diary.views.analyze_emotions')
@@ -392,13 +688,13 @@ class AnalyseFromVoiceViewTest(TestCase):
     def test_analyse_from_voice_success(self, mock_generate, mock_interpret, 
                                       mock_classify, mock_analyze, mock_transcribe):
         """
-        Test de l'API analyse_from_voice avec succès complet.
+        Test de l'API SSE avec succès complet.
         
-        Objectif : Vérifier le format de réponse en cas de succès
+        Objectif : Vérifier la séquence complète d'événements SSE
         """
         # Configuration des mocks
-        mock_transcribe.return_value = "Rêve de test API"
-        mock_analyze.return_value = ({'joie': 0.8, 'surprise': 0.2}, ('joie', 0.8))
+        mock_transcribe.return_value = "Rêve de test API SSE"
+        mock_analyze.return_value = ({'joie': 0.8, 'surprise': 0.2}, ['joie'])
         mock_classify.return_value = 'rêve'
         mock_interpret.return_value = {
             'Émotionnelle': 'Test émotionnel',
@@ -418,98 +714,109 @@ class AnalyseFromVoiceViewTest(TestCase):
                 'audio': audio_file
             })
         
-        # Vérifications
+        # Vérifications de base
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.content)
+        self.assertEqual(response['Content-Type'], 'text/event-stream')
         
-        # Structure de réponse
-        self.assertTrue(data['success'])
-        self.assertIn('transcription', data)
-        self.assertIn('emotions', data)
-        self.assertIn('dominant_emotion', data)
-        self.assertIn('dream_type', data)
-        self.assertIn('interpretation', data)
-        self.assertIn('image_path', data)
+        # Collecte des événements SSE
+        content = b''.join(response.streaming_content).decode('utf-8')
+        events = self._parse_sse_events(content)
         
-        # Valeurs formatées
-        self.assertEqual(data['transcription'], 'Rêve de test API')
-        self.assertEqual(data['dominant_emotion'], ['Joie'])  # Formaté
-        self.assertEqual(data['dream_type'], 'Rêve')          # Formaté
+        # Vérification de la séquence d'événements
+        event_steps = [event['step'] for event in events]
+        expected_steps = ['transcription', 'emotions', 'image', 'interpretation', 'complete']
+        self.assertEqual(event_steps, expected_steps)
         
-        # Un rêve doit être créé
-        dream = Dream.objects.get(user=self.user)
+        # Vérification du contenu de chaque étape
+        transcription_event = events[0]
+        self.assertEqual(transcription_event['data']['transcription'], "Rêve de test API SSE")
+        
+        emotions_event = events[1]
+        self.assertEqual(emotions_event['data']['dominant_emotion'], 'Joie')
+        self.assertEqual(emotions_event['data']['dream_type'], 'Rêve')
+        
+        # Vérification que le rêve a été créé en base
+        dream = Dream.objects.filter(user=self.user).first()
+        self.assertIsNotNone(dream)
+        self.assertEqual(dream.transcription, "Rêve de test API SSE")
         self.assertTrue(dream.is_analyzed)
 
-    def test_analyse_from_voice_transcription_failure(self):
+    @patch('diary.views.transcribe_audio')
+    def test_analyse_from_voice_transcription_failure(self, mock_transcribe):
         """
-        Test de l'API avec échec de transcription.
+        Test d'échec lors de la transcription en mode SSE.
         
-        Objectif : Vérifier la gestion d'erreur au premier niveau
+        Objectif : Vérifier la gestion d'erreur au premier niveau SSE
         """
-        with patch('diary.views.transcribe_audio', return_value=None):
-            self.client.login(email='api@example.com', password='testpass123')
+        mock_transcribe.return_value = None
+        
+        self.client.login(email='api@example.com', password='testpass123')
+        
+        with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
+            audio_file.write(b'fake_audio_data')
+            audio_file.seek(0)
             
-            with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
-                audio_file.write(b'fake_audio_data')
-                audio_file.seek(0)
-                
-                response = self.client.post(reverse('analyse_from_voice'), {
-                    'audio': audio_file
-                })
-            
-            data = json.loads(response.content)
-            self.assertFalse(data['success'])
-            self.assertIn('error', data)
-            
-            # Aucun rêve créé
-            self.assertEqual(Dream.objects.filter(user=self.user).count(), 0)
+            response = self.client.post(reverse('analyse_from_voice'), {
+                'audio': audio_file
+            })
+        
+        content = b''.join(response.streaming_content).decode('utf-8')
+        events = self._parse_sse_events(content)
+        
+        # Doit contenir uniquement un événement d'erreur
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]['step'], 'error')
+        
+        # Aucun rêve créé
+        self.assertEqual(Dream.objects.filter(user=self.user).count(), 0)
 
-    def test_analyse_from_voice_exception_handling(self):
+    @patch('diary.views.transcribe_audio')
+    def test_analyse_from_voice_exception_handling(self, mock_transcribe):
         """
-        Test de gestion d'exception dans l'API.
+        Test de gestion d'exception globale en mode SSE.
         
-        Objectif : Vérifier que les exceptions sont gérées gracieusement
+        Objectif : Vérifier que les exceptions sont gérées gracieusement en SSE
         """
-        with patch('diary.views.transcribe_audio', side_effect=Exception("Erreur inattendue")):
-            self.client.login(email='api@example.com', password='testpass123')
+        mock_transcribe.side_effect = Exception("Erreur inattendue SSE")
+        
+        self.client.login(email='api@example.com', password='testpass123')
+        
+        with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
+            audio_file.write(b'fake_audio_data')
+            audio_file.seek(0)
             
-            with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
-                audio_file.write(b'fake_audio_data')
-                audio_file.seek(0)
-                
-                response = self.client.post(reverse('analyse_from_voice'), {
-                    'audio': audio_file
-                })
-            
-            # L'API doit gérer l'exception
-            self.assertEqual(response.status_code, 200)
-            data = json.loads(response.content)
-            self.assertFalse(data['success'])
+            response = self.client.post(reverse('analyse_from_voice'), {
+                'audio': audio_file
+            })
+        
+        # L'API doit gérer l'exception et retourner un événement d'erreur
+        content = b''.join(response.streaming_content).decode('utf-8')
+        events = self._parse_sse_events(content)
+        
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]['step'], 'error')
 
     def test_analyse_from_voice_content_type(self):
         """
-        Test du Content-Type de la réponse API.
+        Test du Content-Type de la réponse API SSE.
         
-        Objectif : Vérifier que l'API retourne du JSON
+        Objectif : Vérifier que l'API retourne du streaming
         """
         self.client.login(email='api@example.com', password='testpass123')
         
         response = self.client.post(reverse('analyse_from_voice'))
         
-        self.assertEqual(response['Content-Type'], 'application/json')
+        self.assertEqual(response['Content-Type'], 'text/event-stream')
 
     def test_analyse_from_voice_csrf_exempt(self):
         """
-        Test que l'API est exemptée de CSRF.
+        Test que l'API SSE est exemptée de CSRF.
         
-        Objectif : Vérifier que l'API fonctionne sans token CSRF
+        Objectif : Vérifier que l'API SSE fonctionne sans token CSRF
         """
         self.client.login(email='api@example.com', password='testpass123')
         
-        # Correction : utiliser django.conf.settings au lieu de self.settings
         from django.conf import settings
-        
-        # Désactiver l'enforcement CSRF pour ce test
         middleware_without_csrf = [m for m in settings.MIDDLEWARE if 'csrf' not in m.lower()]
         
         with self.settings(MIDDLEWARE=middleware_without_csrf):
@@ -517,7 +824,7 @@ class AnalyseFromVoiceViewTest(TestCase):
             
             # Doit fonctionner (même si pas d'audio)
             self.assertEqual(response.status_code, 200)
-
+            self.assertEqual(response['Content-Type'], 'text/event-stream')
 
 class TranscribeViewTest(TestCase):
     """
@@ -679,14 +986,16 @@ class ViewsErrorHandlingTest(TestCase):
         # Django gère ça gracieusement
         self.assertIn(response.status_code, [200, 405])  # OK ou Method Not Allowed
         
-        # Paramètres invalides sur l'API
+        # Paramètres invalides sur l'API (et sans fichier audio) -> SSE d'erreur
         response = self.client.post(reverse('analyse_from_voice'), {
             'invalid_param': 'invalid_value'
         })
         
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.content)
-        self.assertFalse(data['success'])
+        self.assertEqual(response['Content-Type'], 'text/event-stream')
+        events = _sse_events_from_response(response)
+        self.assertGreaterEqual(len(events), 1)
+        self.assertEqual(events[0].get('step'), 'error')
 
 
 class ViewsSecurityTest(TestCase):
@@ -760,9 +1069,12 @@ class ViewsSecurityTest(TestCase):
         
         # L'application doit gérer ce cas sans planter
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.content)
-        # Soit erreur de transcription, soit gestion gracieuse
-        self.assertIn('success', data)
+        self.assertEqual(response['Content-Type'], 'text/event-stream')
+        events = _sse_events_from_response(response)
+        # Doit au moins produire un événement (erreur de transcription probable)
+        self.assertGreaterEqual(len(events), 1)
+        # Soit erreur, soit la chaîne a été gérée gracieusement jusqu'au bout
+        self.assertIn(events[-1].get('step'), ['error', 'complete'])
 
     def test_response_headers_security(self):
         """
@@ -777,69 +1089,53 @@ class ViewsSecurityTest(TestCase):
         # Vérifier que la réponse contient du HTML valide
         self.assertEqual(response['Content-Type'], 'text/html; charset=utf-8')
         
-        # API JSON
+        # API SSE (anciennement JSON)
         response = self.client.post(reverse('analyse_from_voice'))
-        self.assertEqual(response['Content-Type'], 'application/json')
+        self.assertEqual(response['Content-Type'], 'text/event-stream')
 
+    @patch('diary.views.transcribe_audio', return_value=None)
+    def test_sse_error_transcription_failure_sends_generic_message_only(self, _):
+        """Transcription KO → SSE ne renvoie que l'erreur générique, rien n'est créé."""
+        self.client.login(email=self.user.email, password='testpass123')
 
-"""
-=== UTILISATION DES TESTS VIEWS ===
+        with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
+            audio_file.write(b'fake_audio_data')
+            audio_file.seek(0)
+            response = self.client.post(reverse('analyse_from_voice'), {'audio': audio_file})
 
-Ce module teste spécifiquement toutes les vues Django de l'application :
+        # Flux SSE + contenu
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response['Content-Type'].startswith('text/event-stream'))
+        events = _sse_events_from_response(response)
 
-1. LANCER LES TESTS VIEWS :
-   python manage.py test diary.tests.test_views
+        # Un seul event 'error' avec le message générique
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].get('step'), 'error')
+        self.assertEqual(events[0].get('message'), DREAM_ERROR_MESSAGE)
 
-2. TESTS PAR VUE :
-   python manage.py test diary.tests.test_views.DreamDiaryViewTest
-   python manage.py test diary.tests.test_views.AnalyseFromVoiceViewTest
-   python manage.py test diary.tests.test_views.DreamRecorderViewTest
+        # Aucun rêve créé
+        self.assertEqual(Dream.objects.filter(user=self.user).count(), 0)
 
-3. COUVERTURE COMPLÈTE DES VUES :
-   - dream_diary ✓ (affichage journal + stats)
-   - dream_recorder ✓ (page enregistrement)
-   - analyse_from_voice ✓ (API analyse complète)
-   - transcribe ✓ (API transcription simple)
+    @patch('diary.views.transcribe_audio', return_value="ok")
+    @patch('diary.views.analyze_emotions', return_value=(None, None))
+    def test_sse_error_after_transcription_shows_generic_message_and_no_creation(self, *_):
+        """Échec après la transcription (analyse émotions KO) → erreur générique et pas de création."""
+        self.client.login(email=self.user.email, password='testpass123')
 
-4. ASPECTS TESTÉS :
-   - Authentification et redirections ✓
-   - Templates et contexte ✓
-   - Codes de réponse HTTP ✓
-   - Isolation utilisateurs ✓
-   - Gestion d'erreurs ✓
-   - Sécurité de base ✓
-   - Performance ✓
-   - Formats de réponse JSON ✓
+        with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
+            audio_file.write(b'fake_audio_data')
+            audio_file.seek(0)
+            response = self.client.post(reverse('analyse_from_voice'), {'audio': audio_file})
 
-5. SÉCURITÉ VALIDÉE :
-   - Protection des vues par authentification
-   - Validation des paramètres d'entrée
-   - Gestion des fichiers uploadés
-   - Headers de réponse appropriés
-   - Protection CSRF où nécessaire
+        events = _sse_events_from_response(response)
 
-6. CAS D'ERREUR COUVERTS :
-   - Utilisateur non connecté
-   - Paramètres manquants
-   - Fichiers malformés
-   - Exceptions internes
-   - Méthodes HTTP incorrectes
+        # On a bien une erreur générique dans le flux
+        err = [e for e in events if e.get('step') == 'error']
+        self.assertEqual(len(err), 1)
+        self.assertEqual(err[0].get('message'), DREAM_ERROR_MESSAGE)
 
-=== PHILOSOPHIE ===
+        # Pas d'interprétation ni de 'complete'
+        self.assertFalse(any(e.get('step') in ('interpretation', 'complete') for e in events))
 
-Ces tests garantissent que l'interface Django fonctionne parfaitement :
-- Toutes les vues sont sécurisées
-- Les templates reçoivent les bonnes données
-- Les APIs retournent les formats corrects
-- Les erreurs sont gérées gracieusement
-- L'isolation utilisateur est parfaite
-
-=== COMPLÉMENTARITÉ ===
-
-Ces tests complètent parfaitement les tests d'intégration :
-- Tests d'intégration : workflow bout-en-bout
-- Tests de vues : détails spécifiques Django
-- Ensemble : couverture complète de l'interface web
-
-Temps d'exécution estimé : 20-30 secondes.
-"""
+        # Aucun rêve créé
+        self.assertEqual(Dream.objects.filter(user=self.user).count(), 0)

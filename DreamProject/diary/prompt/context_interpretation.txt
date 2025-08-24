@@ -30,3 +30,4 @@ FORMAT JSON OBLIGATOIRE :
 }
 
 RAPPEL CRITIQUE : Aucun astérisque, aucun mot en gras, aucun formatage. Texte brut uniquement.
+Tu dois renvoyer uniquement un objet JSON valide, sans texte avant/après, sans bloc de code.

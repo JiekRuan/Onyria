@@ -20,9 +20,9 @@ import time
 
 from ..models import Dream
 from ..utils import get_profil_onirique_stats
+from ._helpers_sse import sse_to_flat_payload as _sse_to_flat_payload, read_sse_events as _read_sse_events
 
 User = get_user_model()
-
 
 class CompleteUserJourneyTest(TestCase):
     """
@@ -109,9 +109,9 @@ class CompleteUserJourneyTest(TestCase):
                 'audio': audio_file
             })
         
-        # Vérifier la réponse d'analyse
+        # Vérifier la réponse d'analyse (SSE → payload aplati)
         self.assertEqual(response.status_code, 200)
-        data = json.loads(response.content)
+        data = _sse_to_flat_payload(response)
         self.assertTrue(data['success'])
         
         # Vérifier le contenu de la réponse
@@ -120,7 +120,7 @@ class CompleteUserJourneyTest(TestCase):
         self.assertIn('dream_type', data)
         self.assertIn('interpretation', data)
         self.assertEqual(data['transcription'], "J'ai rêvé que je volais au-dessus d'une ville magnifique illuminée par le soleil couchant")
-        self.assertEqual(data['dominant_emotion'], ['Joie'])  # Formaté via EMOTION_LABELS
+        self.assertEqual(data['dominant_emotion'], 'Joie')  # Format unifié: chaîne
         self.assertEqual(data['dream_type'], 'Rêve')          # Formaté via DREAM_TYPE_LABELS
         
         # Étape 5 : Retour au journal - le rêve doit être là
@@ -208,7 +208,7 @@ class CompleteUserJourneyTest(TestCase):
                     'audio': audio_file
                 })
             
-            data = json.loads(response.content)
+            data = _sse_to_flat_payload(response)
             self.assertFalse(data['success'])
             self.assertIn('error', data)
         
@@ -230,7 +230,7 @@ class CompleteUserJourneyTest(TestCase):
                     'audio': audio_file
                 })
             
-            data = json.loads(response.content)
+            data = _sse_to_flat_payload(response)
             self.assertTrue(data['success'])
         
         # Vérifier qu'un rêve a été créé après récupération
@@ -350,7 +350,6 @@ class MultiUserIsolationTest(TestCase):
     @patch('diary.views.classify_dream')
     @patch('diary.views.interpret_dream')
     @patch('diary.views.generate_image_from_text')
-    
     def test_sequential_users_analysis(self, mock_generate, mock_interpret, mock_classify, mock_analyze, mock_transcribe):
         """
         Test d'analyses séquentielles par plusieurs utilisateurs.
@@ -375,7 +374,7 @@ class MultiUserIsolationTest(TestCase):
             response = self.client.post(reverse('analyse_from_voice'), {
                 'audio': audio_file
             })
-            results.append(('user1@example.com', json.loads(response.content)))
+            results.append(('user1@example.com', _sse_to_flat_payload(response)))
         
         # Analyser pour user2  
         self.client.login(email='user2@example.com', password='testpass123')
@@ -386,7 +385,7 @@ class MultiUserIsolationTest(TestCase):
             response = self.client.post(reverse('analyse_from_voice'), {
                 'audio': audio_file
             })
-            results.append(('user2@example.com', json.loads(response.content)))
+            results.append(('user2@example.com', _sse_to_flat_payload(response)))
         
         # Vérifications (identiques à l'original)
         self.assertEqual(len(results), 2)
@@ -558,10 +557,10 @@ class DataConsistencyTest(TestCase):
                     'audio': audio_file
                 })
             
-            data = json.loads(response.content)
+            data = _sse_to_flat_payload(response)
             
             # Vérifier le formatage dans l'API
-            self.assertEqual(data['dominant_emotion'], ['Colère'])  # Formaté
+            self.assertEqual(data['dominant_emotion'], 'Colère')  # Format unifié: chaîne
             self.assertEqual(data['dream_type'], 'Cauchemar')       # Formaté
         
         # Test via la vue journal
@@ -577,10 +576,9 @@ class WorkflowRobustnessTest(TestCase):
     """
     Tests de robustesse du workflow complet.
     
-    Cette classe teste que l'application reste stable
-    dans toutes les conditions d'utilisation.
+    Cette classe vérifie que l'application reste stable
+    dans différentes conditions d'utilisation.
     """
-    
     def setUp(self):
         self.user = User.objects.create_user(
             email='robustness@example.com',
@@ -591,68 +589,61 @@ class WorkflowRobustnessTest(TestCase):
 
     def test_workflow_with_partial_ai_failures(self):
         """
-        Test du workflow avec échecs partiels de l'IA.
-        
-        Objectif : Vérifier que l'app gère les pannes partielles gracieusement
+        Transcription OK, mais analyse d'émotions échoue.
+        → Le workflow doit échouer proprement et ne rien créer.
         """
         self.client.login(email='robustness@example.com', password='testpass123')
-        
-        # Cas 1: Transcription réussit, mais analyse d'émotions échoue
+
+        # Patche les symboles à l'endroit où ils sont utilisés : diary.views
         with patch('diary.views.transcribe_audio', return_value="Transcription OK"), \
              patch('diary.views.analyze_emotions', return_value=(None, None)):
-            
             with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
                 audio_file.write(b'fake_audio_data')
                 audio_file.seek(0)
-                
-                response = self.client.post(reverse('analyse_from_voice'), {
-                    'audio': audio_file
-                })
-            
-            data = json.loads(response.content)
-            self.assertFalse(data['success'])
-            # Aucun rêve créé en cas d'échec partiel
-            self.assertEqual(Dream.objects.filter(user=self.user).count(), 0)
+                response = self.client.post(reverse('analyse_from_voice'), {'audio': audio_file})
+                # IMPORTANT : lire le flux tant que les patchs sont actifs
+                data = _sse_to_flat_payload(response)
+
+        self.assertFalse(data['success'])
+        self.assertEqual(Dream.objects.filter(user=self.user).count(), 0)
 
     def test_workflow_with_image_generation_failure(self):
         """
-        Test du workflow avec échec de génération d'image uniquement.
-        
-        Objectif : Vérifier que l'échec d'image n'empêche pas la sauvegarde
+        Échec de génération d'image uniquement.
+        → Le workflow doit réussir et créer le rêve sans image.
         """
+        # Tout passe sauf l'image
         with patch('diary.views.transcribe_audio', return_value="Rêve sans image"), \
              patch('diary.views.analyze_emotions', return_value=({'joie': 0.8}, ('joie', 0.8))), \
-             patch('diary.views.classify_dream', return_value='reve'), \
-             patch('diary.views.interpret_dream', return_value={'Émotionnelle': 'Test'}), \
-             patch('diary.views.generate_image_from_text', return_value=False):  # Échec image
-            
+             patch('diary.views.classify_dream', return_value='rêve'), \
+             patch('diary.views.interpret_dream', return_value={
+                 "Émotionnelle": "Texte.",
+                 "Symbolique": "Texte.",
+                 "Cognitivo-scientifique": "Texte.",
+                 "Freudien": "Texte."
+             }), \
+             patch('diary.views.generate_image_from_text', return_value=False):
             self.client.login(email='robustness@example.com', password='testpass123')
-            
             with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
                 audio_file.write(b'fake_audio_data')
                 audio_file.seek(0)
-                
-                response = self.client.post(reverse('analyse_from_voice'), {
-                    'audio': audio_file
-                })
-        
-        # Le workflow doit réussir malgré l'échec de l'image
-        data = json.loads(response.content)
+                response = self.client.post(reverse('analyse_from_voice'), {'audio': audio_file})
+                # Lire le flux sous patch
+                data = _sse_to_flat_payload(response)
+
+        # Le workflow doit être un succès malgré l'image KO
         self.assertTrue(data['success'])
-        
-        # Le rêve doit être créé
+
+        # Le rêve doit être créé et analysé, sans image
         dream = Dream.objects.get(user=self.user)
         self.assertEqual(dream.transcription, "Rêve sans image")
         self.assertTrue(dream.is_analyzed)
-        self.assertFalse(dream.has_image)  # Pas d'image
+        self.assertFalse(dream.has_image)
 
     def test_workflow_performance_with_realistic_usage(self):
         """
-        Test de performance du workflow avec usage réaliste.
-        
-        Objectif : Vérifier que les performances restent bonnes
+        Performance de la vue journal avec 30 rêves existants.
         """
-        # Simuler 30 rêves existants (usage de 1 mois)
         for i in range(30):
             Dream.objects.create(
                 user=self.user,
@@ -661,25 +652,65 @@ class WorkflowRobustnessTest(TestCase):
                 dominant_emotion="joie" if i % 2 == 0 else "tristesse",
                 is_analyzed=True
             )
-        
+
         self.client.login(email='robustness@example.com', password='testpass123')
-        
-        # Test de performance de la vue journal
+
         start_time = time.time()
         response = self.client.get(reverse('dream_diary'))
-        end_time = time.time()
-        
-        execution_time = end_time - start_time
-        
-        # Doit rester rapide même avec 30 rêves
+        execution_time = time.time() - start_time
+
         self.assertLess(execution_time, 2.0)
         self.assertEqual(response.status_code, 200)
-        
-        # Vérifier que les données sont correctes
+
         dreams = response.context['dreams']
         self.assertEqual(len(dreams), 30)
-        
-        # Vérifier que les stats sont calculées correctement
+
         stats = response.context
         self.assertIsNotNone(stats.get('statut_reveuse'))
         self.assertIsInstance(stats.get('pourcentage_reveuse'), int)
+
+    # Contrat SSE : patche sur diary.views (lieu d'utilisation réel)
+    @patch('diary.views.transcribe_audio', return_value="Un rêve bref")
+    @patch('diary.views.analyze_emotions', return_value=({'joie': 1.0}, ('joie', 1.0)))
+    @patch('diary.views.classify_dream', return_value='rêve')
+    @patch('diary.views.interpret_dream', return_value={'Émotionnelle': 'OK', 'Symbolique': 'OK', 'Cognitivo-scientifique': 'OK', 'Freudien': 'OK'})
+    @patch('diary.views.generate_image_from_text', return_value=False)  # échec image non bloquant
+    def test_sse_contract_headers_and_stream(self, *_):
+        """Contrat SSE : headers + streaming + payload final bien formé."""
+        self.client.login(email='robustness@example.com', password='testpass123')
+
+        with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
+            audio_file.write(b'fake_audio_data')
+            audio_file.seek(0)
+            response = self.client.post(reverse('analyse_from_voice'), {'audio': audio_file})
+
+        # Headers / streaming
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response['Content-Type'].startswith('text/event-stream'))
+        self.assertIn('Cache-Control', response)
+        self.assertTrue(getattr(response, 'streaming', False) or hasattr(response, 'streaming_content'))
+        if response.has_header('X-Accel-Buffering'):
+            self.assertEqual(response['X-Accel-Buffering'], 'no')
+
+        # Payload final via helper (lecture complète du flux SSE)
+        data = _sse_to_flat_payload(response)
+        self.assertIn('success', data)
+        self.assertTrue(data['success'])  # image échouée => workflow OK
+        self.assertIn('dominant_emotion', data)
+        self.assertIsInstance(data['dominant_emotion'], str)
+
+    def test_sse_requires_authentication(self):
+        """Accès non authentifié : refus (302/401/403 selon config)."""
+        with tempfile.NamedTemporaryFile(suffix='.wav') as audio_file:
+            audio_file.write(b'fake_audio_data')
+            audio_file.seek(0)
+            response = self.client.post(reverse('analyse_from_voice'), {'audio': audio_file})
+        self.assertIn(response.status_code, (302, 401, 403))
+
+    def test_sse_get_is_not_allowed(self):
+        """Méthode GET interdite sur l’endpoint SSE."""
+        response = self.client.get(reverse('analyse_from_voice'))
+        self.assertEqual(response.status_code, 405)
+
+
+
