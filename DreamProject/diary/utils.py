@@ -4,7 +4,13 @@ import math
 import time
 import tempfile
 import logging
-import httpx  # nouveau: fallback HTTP direct
+import spacy
+import re
+import nltk
+import httpx
+
+from typing import List
+
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.core.files.base import ContentFile
@@ -14,14 +20,180 @@ from dotenv import load_dotenv
 from django.conf import settings
 from groq import Groq
 from mistralai import Mistral
-from collections import Counter
+from collections import Counter, defaultdict
 from .models import Dream
+from .constants import THEME_CATEGORIES
 
-# Configuration du logging professionnel
-logger = logging.getLogger(__name__)
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
 
 # Chargement des variables d'environnement
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+try:
+    nlp = spacy.load("fr_core_news_sm")
+except OSError:
+    logger.warning(
+        "Modèle spaCy français non trouvé. Installer avec: python -m spacy download fr_core_news_sm"
+    )
+    nlp = None
+
+try:
+    nltk.download('stopwords', quiet=True)
+    FRENCH_STOPWORDS = set(stopwords.words('french'))
+    stemmer = SnowballStemmer('french')
+except ImportError:
+    logger.warning("NLTK non disponible. Installer avec: pip install nltk")
+    FRENCH_STOPWORDS = set()
+    stemmer = None
+
+DREAM_SPECIFIC_STOPWORDS = {
+    # Mots du rêve
+    'rêve',
+    'rêver',
+    'dormir',
+    'nuit',
+    'moment',
+    'fois',
+    'chose',
+    'truc',
+    'machin',
+    'endroit',
+    'côté',
+    'genre',
+    'espèce',
+    'sorte',
+    'façon',
+    'maniÃ¨re',
+    'air',
+    'impression',
+    'sentiment',
+    'sensation',
+    'souvenir',
+    'souviens',
+    'rappelle',
+    'crois',
+    'pense',
+    'imagine',
+    'semble',
+    # Verbes trop génériques
+    'faire',
+    'avoir',
+    'être',
+    'aller',
+    'dire',
+    'voir',
+    'savoir',
+    'pouvoir',
+    'vouloir',
+    'devoir',
+    'prendre',
+    'donner',
+    'mettre',
+    'partir',
+    'venir',
+    'arriver',
+    'passer',
+    'rester',
+    'devenir',
+    'porter',
+    'regarder',
+    'entendre',
+    'sentir',
+    'trouver',
+    'laisser',
+    'suivre',
+    'montrer',
+    'demander',
+    'parler',
+    'tenir',
+    'jouer',
+    'tourner',
+    'ouvrir',
+    'fermer',
+    'commencer',
+    'finir',
+    # Mots de liaison et adverbes
+    'puis',
+    'après',
+    'avant',
+    'pendant',
+    'soudain',
+    'tout',
+    'très',
+    'bien',
+    'mal',
+    'plus',
+    'moins',
+    'encore',
+    'déjà',
+    'toujours',
+    'jamais',
+    'parfois',
+    'souvent',
+    'beaucoup',
+    'peu',
+    'assez',
+    'trop',
+    'vraiment',
+    'plutôt',
+    # Mots vagues
+    'personne',
+    'quelqu',
+    'quelque',
+    'quelquun',
+    'part',
+    'endroit',
+    'lieu',
+    'temps',
+    'année',
+    'jour',
+    'heure',
+    'minute',
+    'seconde',
+    'vie',
+    'mort',
+    'histoire',
+    'situation',
+    'problème',
+    'question',
+    'réponse',
+    'idée',
+}
+
+# Verbes d'action spécifiques qu'on veut garder (actions significatives dans les rêves)
+SIGNIFICANT_DREAM_VERBS = {
+    'voler',
+    'tomber',
+    'courir',
+    'fuir',
+    'poursuivre',
+    'chaser',
+    'nager',
+    'escalader',
+    'grimper',
+    'danser',
+    'chanter',
+    'crier',
+    'pleurer',
+    'rire',
+    'embrasser',
+    'frapper',
+    'tuer',
+    'mourir',
+    'naître',
+    'marier',
+    'divorcer',
+    'conduire',
+    'voyager',
+    'partir',
+    'explorer',
+    'chercher',
+    'cacher',
+}
+
 
 # Constantes de configuration
 WHISPER_MODEL = "whisper-large-v3-turbo"
@@ -40,7 +212,7 @@ MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 # Clients externes
 groq_client = Groq(
     api_key=GROQ_API_KEY,
-    http_client=httpx.Client(http2=False, timeout=30)  # HTTP/1.1 + timeout ↑
+    http_client=httpx.Client(http2=False, timeout=30),  # HTTP/1.1 + timeout ↑
 )
 mistral_client = Mistral(api_key=MISTRAL_API_KEY)
 
@@ -78,7 +250,9 @@ def validate_and_fix_interpretation(interpretation_data):
     ]
     fixed_interpretation = {}
 
-    logger.debug(f"Validation interprétation - Clés reçues: {list(interpretation_data.keys())}")
+    logger.debug(
+        f"Validation interprétation - Clés reçues: {list(interpretation_data.keys())}"
+    )
 
     for key in expected_keys:
         if key in interpretation_data:
@@ -112,13 +286,24 @@ def validate_and_fix_interpretation(interpretation_data):
 
 # ---------- RETRY SYSTEM ----------
 
+
 def _is_retryable_transcription_error(err: Exception) -> bool:
     """nouveau: détecte les erreurs réseau/temporaires qui méritent un retry"""
     msg = str(err).lower()
     keywords = [
-        "connection error", "connection reset", "connection aborted",
-        "timeout", "temporarily unavailable", "service unavailable",
-        "tls", "ssl", "proxy", "rate limit", "503", "502", "429",
+        "connection error",
+        "connection reset",
+        "connection aborted",
+        "timeout",
+        "temporarily unavailable",
+        "service unavailable",
+        "tls",
+        "ssl",
+        "proxy",
+        "rate limit",
+        "503",
+        "502",
+        "429",
     ]
     return any(k in msg for k in keywords)
 
@@ -149,9 +334,15 @@ def _transcribe_via_httpx(file_path: str, language: str = "fr") -> str | None:
     try:
         with open(file_path, "rb") as f:
             files = {"file": ("audio.wav", f, "audio/wav")}
-            timeout = httpx.Timeout(connect=15.0, read=180.0, write=60.0, pool=60.0)
-            limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
-            with httpx.Client(http2=False, timeout=timeout, limits=limits, trust_env=True) as client:
+            timeout = httpx.Timeout(
+                connect=15.0, read=180.0, write=60.0, pool=60.0
+            )
+            limits = httpx.Limits(
+                max_keepalive_connections=5, max_connections=10
+            )
+            with httpx.Client(
+                http2=False, timeout=timeout, limits=limits, trust_env=True
+            ) as client:
                 r = client.post(url, headers=headers, data=data, files=files)
                 r.raise_for_status()
                 payload = r.json()
@@ -178,10 +369,12 @@ def transcribe_audio(audio_data, language="fr"):
     if not GROQ_API_KEY:
         logger.error("Échec transcription audio: GROQ_API_KEY manquante")
         return None
-    
+
     temp_file_path = None
     try:
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            suffix='.wav', delete=False
+        ) as temp_file:
             temp_file.write(audio_data)
             temp_file_path = temp_file.name
 
@@ -190,7 +383,9 @@ def transcribe_audio(audio_data, language="fr"):
         # Système de retry avec backoff exponentiel
         for attempt in range(1, TRANSCRIBE_MAX_RETRIES + 1):
             try:
-                logger.info(f"Transcription tentative {attempt}/{TRANSCRIBE_MAX_RETRIES}")
+                logger.info(
+                    f"Transcription tentative {attempt}/{TRANSCRIBE_MAX_RETRIES}"
+                )
                 with open(temp_file_path, "rb") as audio_file:
                     transcription = groq_client.audio.transcriptions.create(
                         file=audio_file,
@@ -203,36 +398,47 @@ def transcribe_audio(audio_data, language="fr"):
                     )
 
                 duration = time.time() - start_time
-                
+
                 # Alertes sur contenu problématique
                 if len(transcription.text) < 10:
-                    logger.warning(f"Transcription très courte: {len(transcription.text)} caractères")
-                
+                    logger.warning(
+                        f"Transcription très courte: {len(transcription.text)} caractères"
+                    )
+
                 if duration > 5:
                     logger.warning(f"Transcription lente: {duration:.2f}s")
-                
-                logger.info(f"Transcription réussie - {len(transcription.text)} caractères en {duration:.2f}s")
+
+                logger.info(
+                    f"Transcription réussie - {len(transcription.text)} caractères en {duration:.2f}s"
+                )
                 return transcription.text
 
             except Exception as e:
                 last_error = e
-                if _is_retryable_transcription_error(e) and attempt < TRANSCRIBE_MAX_RETRIES:
-                    sleep_s = round(TRANSCRIBE_BACKOFF_BASE ** attempt, 2)
-                    logger.warning(f"Transcription erreur réseau (retry dans {sleep_s}s): {e}")
+                if (
+                    _is_retryable_transcription_error(e)
+                    and attempt < TRANSCRIBE_MAX_RETRIES
+                ):
+                    sleep_s = round(TRANSCRIBE_BACKOFF_BASE**attempt, 2)
+                    logger.warning(
+                        f"Transcription erreur réseau (retry dans {sleep_s}s): {e}"
+                    )
                     time.sleep(sleep_s)
                     continue
                 else:
-                    logger.error("Transcription error (%s): %s", type(e).__name__, e)
+                    logger.error(
+                        "Transcription error (%s): %s", type(e).__name__, e
+                    )
                     break
 
         # Fallback HTTPX en dernier recours
         logger.info("Tentative fallback HTTPX pour la transcription…")
         result = _transcribe_via_httpx(temp_file_path, language)
-        
+
         if result:
             duration = time.time() - start_time
             logger.info(f"Fallback HTTPX réussi en {duration:.2f}s")
-        
+
         return result
 
     finally:
@@ -241,7 +447,9 @@ def transcribe_audio(audio_data, language="fr"):
             try:
                 os.unlink(temp_file_path)
             except Exception as e:
-                logger.warning(f"Impossible de supprimer le fichier temporaire: {e}")
+                logger.warning(
+                    f"Impossible de supprimer le fichier temporaire: {e}"
+                )
 
 
 # ---------- FALLBACK SYSTEM ----------
@@ -288,13 +496,19 @@ def safe_mistral_call(model, messages, operation="API call"):
             attempt_duration = time.time() - attempt_start
 
             if attempt > 0:
-                logger.warning(f"[{operation}] Fallback utilisé: {current_model} en {attempt_duration:.2f}s")
+                logger.warning(
+                    f"[{operation}] Fallback utilisé: {current_model} en {attempt_duration:.2f}s"
+                )
             else:
-                logger.info(f"[{operation}] Succès avec {current_model} en {attempt_duration:.2f}s")
-            
+                logger.info(
+                    f"[{operation}] Succès avec {current_model} en {attempt_duration:.2f}s"
+                )
+
             # Alerte sur performance dégradée
             if attempt_duration > 10:
-                logger.warning(f"[{operation}] Performance dégradée: {attempt_duration:.2f}s")
+                logger.warning(
+                    f"[{operation}] Performance dégradée: {attempt_duration:.2f}s"
+                )
 
             return response
 
@@ -315,20 +529,30 @@ def safe_mistral_call(model, messages, operation="API call"):
                 ]
             ):
                 if "quota" in error_msg:
-                    logger.warning(f"[{operation}] QUOTA ATTEINT - {current_model}")
+                    logger.warning(
+                        f"[{operation}] QUOTA ATTEINT - {current_model}"
+                    )
                 elif "rate_limit" in error_msg:
-                    logger.warning(f"[{operation}] RATE LIMIT - {current_model}")
+                    logger.warning(
+                        f"[{operation}] RATE LIMIT - {current_model}"
+                    )
                 else:
-                    logger.warning(f"[{operation}] Erreur {current_model}: {e}")
+                    logger.warning(
+                        f"[{operation}] Erreur {current_model}: {e}"
+                    )
 
                 if attempt == len(models_to_try) - 1:
                     total_duration = time.time() - start_time
-                    logger.error(f"[{operation}] Tous les fallbacks échoués après {total_duration:.2f}s")
+                    logger.error(
+                        f"[{operation}] Tous les fallbacks échoués après {total_duration:.2f}s"
+                    )
                     return None
 
                 continue
             else:
-                logger.error(f"[{operation}] Erreur critique {current_model}: {e}")
+                logger.error(
+                    f"[{operation}] Erreur critique {current_model}: {e}"
+                )
                 raise e
 
     return None
@@ -354,7 +578,9 @@ def analyze_emotions(text):
     )
 
     if response is None:
-        logger.error("Échec analyse émotionnelle - tous les modèles indisponibles")
+        logger.error(
+            "Échec analyse émotionnelle - tous les modèles indisponibles"
+        )
         return None, None
 
     try:
@@ -366,7 +592,9 @@ def analyze_emotions(text):
             try:
                 raw = dict(raw)
             except Exception:
-                logger.error(f"Format inattendu des émotions (liste non convertible): {raw}")
+                logger.error(
+                    f"Format inattendu des émotions (liste non convertible): {raw}"
+                )
                 return None, None
 
         if not isinstance(raw, dict):
@@ -390,7 +618,7 @@ def analyze_emotions(text):
 
         logger.info(f"Émotion dominante: {dominant[0]} ({dominant[1]:.2f})")
         logger.debug(f"Scores détaillés: {json.dumps(scores, indent=2)}")
-        
+
         return scores, dominant
 
     except (json.JSONDecodeError, KeyError) as e:
@@ -539,6 +767,174 @@ def generate_image_from_text(user, prompt_text, dream_instance):
         return False
 
 
+# ---------- THEMATIQUE ----------
+
+
+def _extract_significant_words(text: str) -> List[str]:
+    """Extrait uniquement les mots potentiellement significatifs"""
+    if not nlp or not text:
+        return _fallback_extract_words(text)
+
+    text = text.lower()
+    text = re.sub(r'[^\w\s]', ' ', text)
+
+    doc = nlp(text)
+    words = []
+
+    for token in doc:
+        lemma = token.lemma_.lower()
+
+        # Garder principalement les noms et quelques verbes/adjectifs spécifiques
+        if (
+            token.pos_ in ['NOUN', 'PROPN']
+            or (token.pos_ == 'VERB' and lemma in SIGNIFICANT_DREAM_VERBS)
+            or (token.pos_ == 'ADJ' and len(lemma) >= 5)
+        ):
+
+            if (
+                len(lemma) >= 3
+                and lemma not in FRENCH_STOPWORDS
+                and lemma not in DREAM_SPECIFIC_STOPWORDS
+                and not lemma.isdigit()
+                and token.is_alpha
+            ):
+
+                words.append(lemma)
+
+    return words
+
+
+def _fallback_extract_words(text: str) -> List[str]:
+    """Version fallback sans spaCy"""
+    if not text:
+        return []
+
+    text = text.lower()
+    text = re.sub(r'[^\w\s]', ' ', text)
+    tokens = text.split()
+
+    words = []
+    for token in tokens:
+        if (
+            len(token) >= 4
+            and token not in FRENCH_STOPWORDS
+            and token not in DREAM_SPECIFIC_STOPWORDS
+            and not token.isdigit()
+            and token.isalpha()
+        ):
+
+            if stemmer:
+                stemmed = stemmer.stem(token)
+                if len(stemmed) >= 3:
+                    words.append(stemmed)
+            else:
+                words.append(token)
+
+    return words
+
+
+def _categorize_words_by_theme(words: List[str]) -> dict:
+    """Catégorise les mots par thèmes"""
+    theme_matches = {}
+
+    for theme_name, keywords in THEME_CATEGORIES.items():
+        matching_words = []
+
+        for word in words:
+            for keyword in keywords:
+                # Correspondance flexible : exacte ou inclusion partielle
+                if (
+                    word == keyword
+                    or keyword in word
+                    or word in keyword
+                    or (
+                        stemmer and stemmer.stem(word) == stemmer.stem(keyword)
+                    )
+                ):
+                    matching_words.append(word)
+                    break
+
+        if matching_words:
+            theme_matches[theme_name] = len(set(matching_words))
+
+    return theme_matches
+
+
+def _calculate_theme_document_frequency(dream_texts: List[str]) -> Counter:
+    """Calcule la fréquence des thèmes par document (rêve)"""
+    theme_document_freq = Counter()
+
+    for dream_text in dream_texts:
+        words = _extract_significant_words(dream_text)
+        theme_matches = _categorize_words_by_theme(words)
+
+        # Marquer la présence de chaque thème dans ce rêve
+        for theme_name, match_count in theme_matches.items():
+            if match_count > 0:  # Au moins un mot de cette catégorie
+                theme_document_freq[theme_name] += 1
+
+    return theme_document_freq
+
+
+def analyze_recurring_themes(user, min_dreams=2, min_occurrence=2):
+    """Analyse les thématiques récurrentes par catégories conceptuelles"""
+    logger.info(f"Analyse thématiques récurrentes user {user.id}")
+
+    dreams = (
+        Dream.objects.filter(user=user, transcription__isnull=False)
+        .exclude(transcription="")
+        .values_list('transcription', flat=True)
+    )
+
+    dream_texts = list(dreams)
+    total_dreams = len(dream_texts)
+
+    if total_dreams < min_dreams:
+        return {
+            'top_theme': 'Pas encore de données',
+            'percentage': 0,
+            'total_dreams': total_dreams,
+            'message': f'Au moins {min_dreams} rêves nécessaires',
+        }
+
+    # Calculer la fréquence documentaire des thèmes
+    theme_freq = _calculate_theme_document_frequency(dream_texts)
+
+    # Filtrer les thèmes récurrents
+    recurring_themes = [
+        (theme, freq)
+        for theme, freq in theme_freq.items()
+        if freq >= min_occurrence
+    ]
+
+    if not recurring_themes:
+        return {
+            'top_theme': 'Aucune récurrence détectée',
+            'percentage': 0,
+            'total_dreams': total_dreams,
+            'message': 'Pas de thématique récurrente trouvée',
+        }
+
+    # Trier par fréquence décroissante
+    recurring_themes.sort(key=lambda x: x[1], reverse=True)
+
+    # Prendre le thème principal
+    top_theme_name, top_theme_count = recurring_themes[0]
+    top_theme_percentage = round((top_theme_count / total_dreams) * 100, 1)
+
+    logger.info(
+        f"Thème récurrent détecté: {top_theme_name} ({top_theme_percentage}%)"
+    )
+
+    return {
+        'top_theme': top_theme_name.capitalize(),
+        'percentage': top_theme_percentage,
+        'total_dreams': total_dreams,
+        'all_themes': recurring_themes[:10],
+        'message': f'{len(recurring_themes)} thématiques récurrentes trouvées',
+    }
+
+
 # ---------- PROFIL ONYRIQUE ----------
 
 
@@ -557,6 +953,8 @@ def get_profil_onirique_stats(user):
             "label_reveuse": "rêves enregistrés",
             "emotion_dominante": "émotion endormie",
             "emotion_dominante_percentage": 0,
+            "thematique_recurrente": "Pas encore de données",
+            "thematique_percentage": 0,
         }
 
     # Statut rêve vs cauchemar
@@ -579,10 +977,15 @@ def get_profil_onirique_stats(user):
     if emotion_counts:
         emotion_dominante, count = emotion_counts.most_common(1)[0]
         emotion_percentage = round((count / total) * 100)
-        logger.info(f"Profil calculé: {statut_reveuse} ({pourcentage}%), émotion: {emotion_dominante}")
+        logger.info(
+            f"Profil calculé: {statut_reveuse} ({pourcentage}%), émotion: {emotion_dominante}"
+        )
     else:
         emotion_dominante = "émotion endormie"
         emotion_percentage = 0
+
+    # Analyse thématique
+    theme_analysis = analyze_recurring_themes(user)
 
     return {
         "statut_reveuse": statut_reveuse,
@@ -590,6 +993,8 @@ def get_profil_onirique_stats(user):
         "label_reveuse": label,
         "emotion_dominante": emotion_dominante,
         "emotion_dominante_percentage": emotion_percentage,
+        "thematique_recurrente": theme_analysis['top_theme'],
+        "thematique_percentage": theme_analysis['percentage'],
     }
 
 
