@@ -6,9 +6,9 @@
 {% block content %}
 
 <!-- Titre -->
-<h2 class="text-3xl font-normal mb-4 text-center text-black">Supprimer le compte</h2>
+<h2 class="auth-title">Supprimer le compte</h2>
 
-<!-- Message d’alerte -->
+<!-- Message d'alerte -->
 <p class="mb-2 text-center text-gray-700 whitespace-nowrap">
     Êtes-vous sûr·e de vouloir supprimer votre compte&nbsp;?
 </p>
@@ -20,14 +20,12 @@
 <form method="post" class="space-y-4">
     {% csrf_token %}
     
-    <div class="flex space-x-4 justify-center">
-        <button type="submit"
-        class="btn-ballon">
+    <div class="button-group-center">
+        <button type="submit" class="btn-ballon">
         Supprimer
     </button>
 
-    <a href="{% url 'account_management' %}"
-        class="btn-ballon">
+    <a href="{% url 'account_management' %}" class="btn-ballon">
         Annuler
     </a>
     </div>

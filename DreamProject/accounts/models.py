@@ -2,9 +2,31 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 import base64
 
-
 class CustomUser(AbstractUser):
+    GENDER_CHOICES = [
+        ('M', 'Homme'),
+        ('F', 'Femme'),
+        ('O', 'Autre'),
+        ('N', 'Préfère ne pas dire'),
+    ]
+    
     email = models.EmailField(unique=True)
+    
+    age = models.PositiveIntegerField(
+        "Âge",
+        null=True,
+        blank=True,
+        help_text="Votre âge"
+    )
+    
+    sexe = models.CharField(
+        "Sexe",
+        max_length=1,
+        choices=GENDER_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Votre sexe"
+    )
     
     profile_picture_base64 = models.TextField(
         blank=True,
