@@ -10,34 +10,43 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-import os
+import os, sys
 from pathlib import Path
-from dotenv import load_dotenv
 import dj_database_url
+from dotenv import load_dotenv
 
-# Charger les variables d'environnement dès le début
-load_dotenv()
+# Construction des chemins dans le projet
+BASE_DIR = Path(__file__).resolve().parent.parent          # .../DreamProject/
+ROOT_DIR = BASE_DIR.parent                                  # racine du dépôt
 
-# Construction des chemins dans le projet : BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Charger le .env à la racine du dépôt (utile en local/prod)
+load_dotenv(ROOT_DIR / ".env")
 
+# Contexte tests/CI (GitHub Actions, etc.)
+IS_CI_OR_TEST = ("test" in sys.argv) or os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true"
 
-# Paramètres de développement rapide - inappropriés pour la production
-# Voir https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# Configuration sécurisée - SECRET_KEY obligatoire (fallback uniquement en CI/tests)
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if IS_CI_OR_TEST:
+        SECRET_KEY = "django-insecure-ci-test-only"
+    else:
+        raise ValueError("SECRET_KEY doit être définie (variable d'environnement ou .env)")
 
-# AVERTISSEMENT DE SÉCURITÉ : gardez secrète la clé secrète utilisée en production !
-SECRET_KEY = os.environ.get("SECRET_KEY", 'django-insecure-y7^764y!vsgk@&0bou_ht(^ca(spl1s!a$sx64b$@@0f=!0-nu')
-
-# AVERTISSEMENT DE SÉCURITÉ : n'exécutez pas avec debug activé en production !
-DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
+# DEBUG désactivé par défaut, mais activé par défaut en CI/tests pour éviter les blocages de checks stricts
+DEBUG = os.getenv("DEBUG", "True" if IS_CI_OR_TEST else "False").lower() == "true"
 
 # Analyse des ALLOWED_HOSTS depuis l'env permettant virgules et/ou espaces, sans schémas
-_hosts_raw = os.environ.get("ALLOWED_HOSTS", "")
+_hosts_raw = os.getenv("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [
     h.strip()
     for h in _hosts_raw.replace("https://", "").replace("http://", "").replace(",", " ").split()
     if h.strip()
 ]
+
+# En production, ALLOWED_HOSTS ne peut pas être vide
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ValueError("ALLOWED_HOSTS doit être défini quand DEBUG=False")
 
 # Configuration IA et modèles - centralisée pour faciliter la maintenance
 AI_CONFIG = {
@@ -66,8 +75,8 @@ AI_CONFIG = {
 }
 
 # Clés API depuis les variables d'environnement
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 
 # Définition des applications
 INSTALLED_APPS = [
@@ -118,7 +127,7 @@ WSGI_APPLICATION = 'Onyria.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Configuration adaptative : utilise DATABASE_URL si présent, sinon SQLite local
-database_url = os.environ.get("DATABASE_URL")
+database_url = os.getenv("DATABASE_URL")
 if database_url:
     DATABASES = {
         'default': dj_database_url.parse(database_url)
