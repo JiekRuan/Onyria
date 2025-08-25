@@ -45,9 +45,8 @@ def dream_diary_view(request):
 
     statut_reveuse = stats.get('statut_reveuse')
     if statut_reveuse:
-        stats['statut_reveuse'] = DREAM_TYPE_LABELS.get(
-            statut_reveuse, statut_reveuse.capitalize()
-        )
+        stats['statut_reveuse'] = format_dream_type_label(statut_reveuse)
+
 
     return render(
         request,

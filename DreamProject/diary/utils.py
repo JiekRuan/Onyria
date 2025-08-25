@@ -15,6 +15,8 @@ from groq import Groq
 from mistralai import Mistral
 from collections import Counter
 from .models import Dream
+import unicodedata
+from typing import Any, Mapping, Optional
 from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS
 
 # Configuration du logging professionnel
@@ -100,60 +102,6 @@ def validate_and_fix_interpretation(interpretation_data):
 
     logger.debug("Validation interprétation terminée avec succès")
     return fixed_interpretation
-
-
-# ---------- NORMALISATION DES LABELS ----------
-
-def _first_value(val):
-    """
-    Prend la 1ère valeur si val est une liste/tuple, sinon renvoie val tel quel.
-    Évite que val=None devienne "None" en string.
-    """
-    if val is None:
-        return ""
-    if isinstance(val, (list, tuple)):
-        return _first_value(val[0] if val else "")
-    return val
-
-def _to_str(val):
-    """
-    Force en string propre:
-    - None -> ""
-    - bytes -> décodage utf-8 best effort
-    - autres -> str(val)
-    """
-    if val is None:
-        return ""
-    if isinstance(val, bytes):
-        try:
-            return val.decode("utf-8", errors="replace")
-        except Exception:
-            return ""
-    return val if isinstance(val, str) else str(val)
-
-def _normalize_label(val, mapping=None):
-    """
-    Normalise un label pour l'affichage/API:
-    - Accepte clé brute, liste/tuple (on prend le 1er élément)
-    - Trim + lower pour la recherche dans le mapping
-    - Fallback: capitalize() si clé inconnue
-    """
-    raw = _to_str(_first_value(val)).strip()
-    if not raw:
-        return ""
-    key_norm = raw.lower()
-    if mapping:
-        mapping_lc = {str(k).lower(): v for k, v in mapping.items()}
-        return mapping_lc.get(key_norm, raw.capitalize())
-    return raw.capitalize()
-
-def format_emotion_label(val):
-    """Ex: 'joie' -> 'Joie' (via EMOTION_LABELS si présent)"""
-    return _normalize_label(val, EMOTION_LABELS)
-
-def format_dream_type_label(val):
-    """Ex: 'cauchemar' -> 'Cauchemar' (via DREAM_TYPE_LABELS si présent)"""
-    return _normalize_label(val, DREAM_TYPE_LABELS)
 
 
 # ---------- SYSTÈME DE RETRY ----------
@@ -810,3 +758,79 @@ def get_emotions_timeline_filtered(
         timeline_list.append(entry)
 
     return timeline_list, list(all_emotions)
+
+# ---------- NORMALISATION DES LABELS ----------
+
+def _strip_accents(s: str) -> str:
+    """
+    Minuscule + suppression des accents + trim pour une comparaison robuste.
+    """
+    s = s.strip().lower()
+    s = unicodedata.normalize("NFKD", s)
+    return "".join(ch for ch in s if not unicodedata.combining(ch))
+
+
+def _first_value(val: Any) -> Any:
+    """
+    Prend la 1ère valeur si val est une liste/tuple, sinon renvoie val tel quel.
+    Évite que val=None devienne "" (affichable) plutôt que "None".
+    """
+    if val is None:
+        return ""
+    if isinstance(val, (list, tuple)):
+        return _first_value(val[0] if val else "")
+    return val
+
+
+def _to_str(val: Any) -> str:
+    """
+    Force en string propre:
+    - None -> ""
+    - bytes -> décodage utf-8 best effort
+    - autres -> str(val)
+    """
+    if val is None:
+        return ""
+    if isinstance(val, bytes):
+        try:
+            return val.decode("utf-8", errors="replace")
+        except Exception:
+            return ""
+    return val if isinstance(val, str) else str(val)
+
+
+# Pré-calcul de mappings normalisés (insensibles aux accents et à la casse)
+_EMO_NORM = {_strip_accents(str(k)): v for k, v in EMOTION_LABELS.items()}
+_DREAM_NORM = {_strip_accents(str(k)): v for k, v in DREAM_TYPE_LABELS.items()}
+
+
+def _normalize_label(val: Any, mapping: Optional[Mapping[str, str]] = None) -> str:
+    """
+    Normalise un label pour l'affichage/API:
+    - Accepte clé brute, liste/tuple (on prend le 1er élément)
+    - Trim + lookup insensible casse/accents dans le mapping
+    - Fallback: capitalize() si clé inconnue
+    """
+    raw = _to_str(_first_value(val)).strip()
+    if not raw:
+        return ""
+    if mapping is not None:
+        # Utilise les tables pré-calculées si on reconnait le mapping
+        if mapping is EMOTION_LABELS:
+            return _EMO_NORM.get(_strip_accents(raw), raw.capitalize())
+        if mapping is DREAM_TYPE_LABELS:
+            return _DREAM_NORM.get(_strip_accents(raw), raw.capitalize())
+        # Fallback générique (rare) : normalise à la volée
+        norm_map = {_strip_accents(str(k)): v for k, v in mapping.items()}
+        return norm_map.get(_strip_accents(raw), raw.capitalize())
+    return raw.capitalize()
+
+
+def format_emotion_label(val: Any) -> str:
+    """Ex: 'Joïe', 'joie', 'JOIE', 'joie ' -> 'Joie' (via EMOTION_LABELS si présent)"""
+    return _normalize_label(val, EMOTION_LABELS)
+
+
+def format_dream_type_label(val: Any) -> str:
+    """Ex: 'CAUCHEMAR', 'cauchemar', 'Cauchemàr' -> 'Cauchemar' (via DREAM_TYPE_LABELS si présent)"""
+    return _normalize_label(val, DREAM_TYPE_LABELS)
