@@ -8,10 +8,11 @@ jobs:
   tests:
     runs-on: ubuntu-latest
 
-    # Donne à Django ce qu'il veut pendant la CI
+    # Secrets/vars pour la CI
     env:
-      SECRET_KEY: django-insecure-ci-test-only
-      DEBUG: "true"   # évite l'erreur ALLOWED_HOSTS pendant les tests
+      SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY_TEST }}  # ← clé stockée chiffrée
+      DEBUG: "false"                                     # on se rapproche de la prod
+      ALLOWED_HOSTS: "testserver,localhost,127.0.0.1"    # évite l'erreur côté settings
 
     steps:
       - name: Checkout
