@@ -12,10 +12,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 import dj_database_url
+from dotenv import load_dotenv
 
-# Charger les variables d'environnement dès le début
+# Charger les variables d'environnement en premier
 load_dotenv()
 
 # Construction des chemins dans le projet : BASE_DIR / 'subdir'.
@@ -25,11 +25,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Paramètres de développement rapide - inappropriés pour la production
 # Voir https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# AVERTISSEMENT DE SÉCURITÉ : gardez secrète la clé secrète utilisée en production !
-SECRET_KEY = os.environ.get("SECRET_KEY", 'django-insecure-y7^764y!vsgk@&0bou_ht(^ca(spl1s!a$sx64b$@@0f=!0-nu')
+# Configuration sécurisée - SECRET_KEY obligatoire
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY doit être définie dans le fichier .env")
 
-# AVERTISSEMENT DE SÉCURITÉ : n'exécutez pas avec debug activé en production !
-DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
+# DEBUG désactivé par défaut (sécurisé)
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
 # Analyse des ALLOWED_HOSTS depuis l'env permettant virgules et/ou espaces, sans schémas
 _hosts_raw = os.environ.get("ALLOWED_HOSTS", "")
@@ -38,6 +40,10 @@ ALLOWED_HOSTS = [
     for h in _hosts_raw.replace("https://", "").replace("http://", "").replace(",", " ").split()
     if h.strip()
 ]
+
+# En production, ALLOWED_HOSTS ne peut pas être vide
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ValueError("ALLOWED_HOSTS doit être défini quand DEBUG=False")
 
 # Configuration IA et modèles - centralisée pour faciliter la maintenance
 AI_CONFIG = {
