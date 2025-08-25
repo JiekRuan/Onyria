@@ -8,9 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from .models import Dream
-from collections import Counter
 from .utils import (
-    transcribe_audio,
     analyze_emotions,
     classify_dream,
     interpret_dream,
@@ -22,6 +20,7 @@ from .utils import (
     get_emotions_timeline_filtered,
     format_emotion_label,
     format_dream_type_label,
+    transcribe_audio,
 )
 from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
 
@@ -96,33 +95,6 @@ def dream_recorder_view(request):
     return render(request, 'diary/dream_recorder.html', {
         'DREAM_ERROR_MESSAGE': DREAM_ERROR_MESSAGE
     })
-
-
-@require_http_methods(["POST"])
-@csrf_exempt
-def transcribe(request):
-    """API : reçoit audio et renvoie texte brut"""
-    if 'audio' in request.FILES:
-        try:
-            audio_file = request.FILES['audio']
-            audio_data = audio_file.read()
-            logger.info(f"Transcription simple demandée - {len(audio_data)} bytes")
-            
-            transcription = transcribe_audio(audio_data)
-            if transcription:
-                logger.info(f"Transcription simple réussie - {len(transcription)} caractères")
-                return JsonResponse(
-                    {'success': True, 'transcription': transcription}
-                )
-            else:
-                logger.error("Échec transcription simple")
-                return JsonResponse(
-                    {'success': False, 'error': 'Échec de la transcription'}
-                )
-        except Exception as e:
-            logger.error(f"Erreur transcription simple: {e}")
-            return JsonResponse({'success': False, 'error': str(e)})
-    return JsonResponse({'success': False, 'error': 'Pas de fichier audio'})
 
 
 @require_http_methods(["POST"])
