@@ -16,6 +16,7 @@ from groq import Groq
 from mistralai import Mistral
 from collections import Counter
 from .models import Dream
+from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS
 
 # Configuration du logging professionnel
 logger = logging.getLogger(__name__)
@@ -63,8 +64,11 @@ def softmax(preds):
 
 def validate_and_fix_interpretation(interpretation_data):
     """
-    Valide et corrige le format de l'interprétation si nécessaire
-    Garantit un format cohérent avec des valeurs string
+    Valide et corrige le format de l'interprétation si nécessaire.
+    - Vérifie la présence des 4 clés attendues.
+    - Extrait le texte depuis des objets {contenu: ...} ou {content: ...}.
+    - Garantit un format cohérent avec des valeurs **texte (str)**.
+      -> Utilise _to_str(...) pour une coercition **robuste** (gère None, bytes, etc.).
     """
     if interpretation_data is None:
         logger.warning("Interprétation None reçue")
@@ -84,30 +88,89 @@ def validate_and_fix_interpretation(interpretation_data):
         if key in interpretation_data:
             value = interpretation_data[key]
 
-            # Si c'est un objet avec 'contenu', extraire le contenu
+            # Si c'est un objet avec 'contenu', extraire le texte
             if isinstance(value, dict) and 'contenu' in value:
                 fixed_interpretation[key] = value['contenu']
                 logger.debug(f"Extraction contenu pour {key}")
-            # Si c'est un objet avec 'content', extraire le content
+
+            # Si c'est un objet avec 'content', extraire le texte
             elif isinstance(value, dict) and 'content' in value:
                 fixed_interpretation[key] = value['content']
                 logger.debug(f"Extraction content pour {key}")
-            # Si c'est déjà une string, la garder
+
+            # Si c'est déjà une chaîne, la conserver telle quelle
             elif isinstance(value, str):
                 fixed_interpretation[key] = value
-            # Sinon, convertir en string
+
             else:
-                fixed_interpretation[key] = str(value)
-                logger.warning(
-                    f"Conversion forcée en string pour {key}: {type(value)}"
-                )
+                # Coercition **robuste** en chaîne :
+                # - None -> ""
+                # - bytes -> décodage UTF-8 (avec remplacement si nécessaire)
+                # - autres types -> str(value)
+                fixed_interpretation[key] = _to_str(value)
+                logger.warning(f"Conversion forcée en string pour {key}: {type(value)}")
+
         else:
-            # Clé manquante, ajouter un placeholder
+            # Clé manquante, ajouter un placeholder explicite
             fixed_interpretation[key] = "Interprétation non disponible"
             logger.warning(f"Clé manquante: {key}")
 
     logger.debug("Validation interprétation terminée avec succès")
     return fixed_interpretation
+
+
+# ---------- LABELS / NORMALISATION ----------
+
+def _first_value(val):
+    """
+    Prend la 1ère valeur si val est une liste/tuple, sinon renvoie val tel quel.
+    Garde val=None -> "" (évite "None" en string).
+    """
+    if val is None:
+        return ""
+    if isinstance(val, (list, tuple)):
+        return _first_value(val[0] if val else "")
+    return val
+
+def _to_str(val):
+    """
+    Force en string propre:
+    - None -> ""
+    - bytes -> décodage utf-8 best effort
+    - autres -> str(val)
+    """
+    if val is None:
+        return ""
+    if isinstance(val, bytes):
+        try:
+            return val.decode("utf-8", errors="replace")
+        except Exception:
+            return ""
+    return val if isinstance(val, str) else str(val)
+
+def _normalize_label(val, mapping=None):
+    """
+    Normalise un label pour l'affichage/API:
+    - Accepte clé brute, liste/tuple (on prend le 1er élément)
+    - Trim + lower pour la recherche dans le mapping
+    - Fallback: capitalize() si clé inconnue
+    """
+    raw = _to_str(_first_value(val)).strip()
+    if not raw:
+        return ""
+    key_norm = raw.lower()
+    if mapping:
+        mapping_lc = {str(k).lower(): v for k, v in mapping.items()}
+        return mapping_lc.get(key_norm, raw.capitalize())
+    return raw.capitalize()
+
+def format_emotion_label(val):
+    """Ex: 'joie' -> 'Joie' (via EMOTION_LABELS si présent)"""
+    return _normalize_label(val, EMOTION_LABELS)
+
+def format_dream_type_label(val):
+    """Ex: 'cauchemar' -> 'Cauchemar' (via DREAM_TYPE_LABELS si présent)"""
+    return _normalize_label(val, DREAM_TYPE_LABELS)
 
 
 # ---------- RETRY SYSTEM ----------
