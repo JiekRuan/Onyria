@@ -12,23 +12,26 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
-
+from dotenv import load_dotenv
 import dj_database_url
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Charger les variables d'environnement dès le début
+load_dotenv()
+
+# Construction des chemins dans le projet : BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# Paramètres de développement rapide - inappropriés pour la production
+# Voir https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
+# AVERTISSEMENT DE SÉCURITÉ : gardez secrète la clé secrète utilisée en production !
 SECRET_KEY = os.environ.get("SECRET_KEY", 'django-insecure-y7^764y!vsgk@&0bou_ht(^ca(spl1s!a$sx64b$@@0f=!0-nu')
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# AVERTISSEMENT DE SÉCURITÉ : n'exécutez pas avec debug activé en production !
 DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 
-# Parse ALLOWED_HOSTS from env allowing commas and/or spaces, without schemes
+# Analyse des ALLOWED_HOSTS depuis l'env permettant virgules et/ou espaces, sans schémas
 _hosts_raw = os.environ.get("ALLOWED_HOSTS", "")
 ALLOWED_HOSTS = [
     h.strip()
@@ -36,8 +39,37 @@ ALLOWED_HOSTS = [
     if h.strip()
 ]
 
-# Application definition
+# Configuration IA et modèles - centralisée pour faciliter la maintenance
+AI_CONFIG = {
+    # Modèles utilisés
+    'WHISPER_MODEL': 'whisper-large-v3-turbo',
+    'IMAGE_GENERATION_MODEL': 'mistral-medium-2505',
+    'EMOTION_MODEL': 'mistral-small-latest',
+    'INTERPRETATION_MODEL': 'mistral-large-latest',
+    
+    # Paramètres de retry
+    'TRANSCRIBE_MAX_RETRIES': 3,
+    'TRANSCRIBE_BACKOFF_BASE': 1.5,
+    
+    # Timeouts et limites
+    'DEFAULT_TEMPERATURE': 0.0,
+    'API_TIMEOUT': 30,
+    'SSE_SLOW_WARNING_THRESHOLD': 15,
+    
+    # Hiérarchies de fallback par modèle
+    'FALLBACK_CHAINS': {
+        'mistral-large-latest': ['mistral-medium', 'mistral-small-latest', 'open-mistral-7b'],
+        'mistral-medium': ['mistral-small-latest', 'open-mistral-7b'],
+        'mistral-small-latest': ['open-mistral-7b'],
+        'open-mistral-7b': [],
+    }
+}
 
+# Clés API depuis les variables d'environnement
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
+
+# Définition des applications
 INSTALLED_APPS = [
     "whitenoise.runserver_nostatic",
     "diary.apps.DiaryConfig",
@@ -82,7 +114,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Onyria.wsgi.application'
 
 
-# Database
+# Base de données
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Configuration adaptative : utilise DATABASE_URL si présent, sinon SQLite local
@@ -100,7 +132,7 @@ else:
     }
 
 
-# Password validation
+# Validation de mot de passe
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -119,7 +151,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
+# Internationalisation
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
@@ -131,7 +163,7 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
+# Fichiers statiques (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = '/static/'
@@ -152,11 +184,11 @@ else:
         "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
     }
 
-# Emplacement de tes sources d'assets (dossier 'static' à la racine du repo)
+# Emplacement des sources d'assets (dossier 'static' à la racine du repo)
 STATICFILES_DIRS = [ BASE_DIR.parent / "static" ]
 
 
-# Default primary key field type
+# Type de clé primaire par défaut
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -166,7 +198,7 @@ AUTH_USER_MODEL = 'accounts.CustomUser'  # Modèle personnalisé
 LOGIN_REDIRECT_URL = '/diary/record/'
 LOGOUT_REDIRECT_URL = 'login'
 
-# LOGGING CONFIGURATION
+# CONFIGURATION DES LOGS
 # Adapte automatiquement le niveau selon l'environnement :
 # - Développement (DEBUG=True) : logs DEBUG pour diagnostic détaillé
 # - Production (DEBUG=False) : logs INFO+ pour monitoring essentiel

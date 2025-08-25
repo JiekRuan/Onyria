@@ -7,6 +7,7 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from .models import Dream
 from .utils import (
     analyze_emotions,
@@ -27,7 +28,7 @@ from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
 logger = logging.getLogger(__name__)
 
 
-# ----- Vues principales ----- #
+# ----- VUES PRINCIPALES ----- #
 
 
 @login_required
@@ -187,7 +188,7 @@ def analyse_from_voice(request):
             yield f"data: {json.dumps({'step': 'interpretation', 'data': {'interpretation': interpretation}})}\n\n"
 
             total_duration = time.time() - start_time
-            if total_duration > 15:
+            if total_duration > settings.AI_CONFIG['SSE_SLOW_WARNING_THRESHOLD']:
                 logger.warning(f"Analyse SSE lente: {total_duration:.2f}s pour user {request.user.id}")
             
             logger.info(f"Analyse SSE user {request.user.id} réussie - Type: {dream_type}, Émotion: {raw_dominant_key} en {total_duration:.2f}s")
