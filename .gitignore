@@ -58,3 +58,8 @@ media/
 
 # === FRONT ===
 node_modules/
+
+# === BUILD OUTPUTS ===
+static/css/tailwind.min.css
+static/css/*.min.css
+static/js/*.min.js
