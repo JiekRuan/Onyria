@@ -1,12 +1,17 @@
 ### Compilation du CSS Tailwind
 
-Pour compiler le CSS Tailwind localement, deux options :
+Pour compiler le CSS Tailwind localement :
 
-- Compiler une seule fois (utile avant un déploiement) :  
-  
-  npm run build:css
+**Compilation unique** (avant déploiement) :
+```bash
+npm run build:css
+```
 
+**Compilation automatique** (mode développement) :
+```bash
+npm run watch:css
+```
 
-- Compiler automatiquement à chaque modification (mode développement) :
+**Important** : Le fichier généré `static/css/tailwind.min.css` est ignoré par Git et ne doit pas être committé. Il est automatiquement généré lors du déploiement sur Render via la Build Command.
 
-  npm run watch:css
+**Déploiement** : En pré-production et production, le CSS est compilé automatiquement via la Build Command de Render.
