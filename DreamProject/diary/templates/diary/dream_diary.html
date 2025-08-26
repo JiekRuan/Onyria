@@ -100,10 +100,18 @@
         alt="{% if dream.image_url %}Rêve du {{ dream.created_at|date:'d/m/Y' }}{% else %}Pas d'image{% endif %}"
         class="w-full h-full object-cover {% if not dream.image_url %}opacity-50{% endif %}"
       >
-      <div class="absolute inset-0 bg-gray-800 bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-end justify-center">
+      <div class="absolute inset-0 bg-gray-800 bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex flex-col items-center justify-end pb-2">
+         <!-- Bouton poubelle -->
+        <button class="btn-ballon-icon opacity-0 group-hover:opacity-100 transition-opacity duration-200 mb-2">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+          </svg>
+        </button>
         <span class="text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 mb-2">
           {{ dream.created_at|date:"d/m/Y" }}
         </span>
+        
+       
       </div>
     </a>
   {% empty %}
