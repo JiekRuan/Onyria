@@ -146,6 +146,15 @@
   .btn-ballon-sm{
     @apply btn-ballon-base inline-block py-2.5 px-6 u-shadow-btn-sm;
   }
+  .btn-ballon-light {
+    background-image: linear-gradient(to bottom, var(--brand-50), var(--brand-100));
+    opacity: 0.8;
+  }
+
+  .btn-ballon-light:hover {
+    background-image: linear-gradient(to bottom, var(--brand-75), var(--brand-200));
+    opacity: 1;
+  }
   .btn-ballon-icon{
     @apply btn-ballon-base p-1.5 w-8 h-8 rounded-full flex items-center justify-center u-shadow-btn-sm;
   }

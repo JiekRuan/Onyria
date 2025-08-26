@@ -102,7 +102,7 @@
       >
       <div class="absolute inset-0 bg-gray-800 bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex flex-col items-center justify-end pb-2">
          <!-- Bouton poubelle -->
-        <button class="btn-ballon-icon opacity-0 group-hover:opacity-100 transition-opacity duration-200 mb-2">
+        <button class="btn-ballon-icon opacity-0 group-hover:opacity-100 transition-opacity duration-200 mb-2" data-dream-id="{{ dream.id }}">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path>
           </svg>
@@ -126,6 +126,20 @@
   <button id="loadMoreBtn">
     <img src="{% static 'img/show_more_arrow.png' %}" alt="Afficher plus de rêves" class="h-10">
   </button>
+</div>
+
+<!-- Modal de suppression -->
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="pastel-baby-powder max-w-md w-full">
+      <h3 class="text-lg font-semibold mb-4 text-center">Supprimer ce rêve ?</h3>
+      <p class="text-sm text-gray-600 mb-6 text-center">Cette action est définitive et ne peut pas être annulée.</p>
+      <div class="button-group-center">
+        <button onclick="closeDeleteModal()" class="btn-ballon-sm btn-ballon-light">Annuler</button>
+        <button id="confirmDeleteBtn" class="btn-ballon-sm">Supprimer</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 
@@ -152,6 +166,16 @@
 
     showNextChunk(initialDisplay); // Affiche les 18 premiers au chargement
     loadMoreBtn.addEventListener('click', () => showNextChunk(loadMoreStep));
+
+    // Event listeners pour les boutons delete
+    document.querySelectorAll('button[data-dream-id]').forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dreamId = this.getAttribute('data-dream-id');
+        showDeleteModal(dreamId);
+      });
+    });
   });
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -191,6 +215,29 @@
             }
         }
     });
+});
+
+// Fonctions modal suppression
+function showDeleteModal(dreamId) {
+  document.getElementById('deleteModal').classList.remove('hidden');
+  document.getElementById('confirmDeleteBtn').onclick = () => confirmDelete(dreamId);
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.add('hidden');
+}
+
+function confirmDelete(dreamId) {
+  console.log('Suppression du rêve:', dreamId);
+  // Ici - ajouter l'appel AJAX vers votre vue delete_dream
+  closeDeleteModal();
+}
+
+// Fermer modal avec Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeDeleteModal();
+  }
 });
 
 </script>
