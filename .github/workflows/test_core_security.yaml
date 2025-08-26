@@ -2,14 +2,14 @@ name: Tests à chaque push
 
 on:
   push:
+  pull_request:
 
 env:
   PYTHON_VERSION: '3.11'
 
 jobs:
-  # Tests core
-  daily_tests:
-    name: "Tests des fonctionnalités principales et tests de sécurité"
+  tests:
+    name: "Tests des fonctionnalités principales"
     runs-on: ubuntu-latest
     
     steps:
@@ -17,7 +17,7 @@ jobs:
       uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
@@ -29,13 +29,9 @@ jobs:
         pip install black
     
     - name: Run Black (check format)
-      run: |
-        black .
+      run: black --check .
     
-    - name: Run core tests (< 15 sec)
+    - name: Run core tests
       run: |
-        python DreamProject/manage.py test diary.tests.test_core --verbosity=1 --parallel --keepdb
-        python DreamProject/manage.py test diary.tests.test_security --verbosity=1 --parallel
-      env:
-        GROQ_API_KEY: 'fake-key-for-ci'
-        MISTRAL_API_KEY: 'fake-key-for-ci'
+        cd DreamProject
+        python manage.py test diary.tests.test_core diary.tests.test_security --verbosity=1 --parallel --keepdb

@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -46,11 +46,8 @@ jobs:
 
       - name: Run ${{ matrix.test-suite }} tests
         run: |
-          python DreamProject/manage.py test diary.tests.test_${{ matrix.test-suite }} --verbosity=2 --parallel
-        env:
-          DEBUG: "False"
-          GROQ_API_KEY: "test-secret-key-for-ci"
-          MISTRAL_API_KEY: "test-secret-key-for-ci"
+          cd DreamProject
+          python manage.py test diary.tests.test_${{ matrix.test-suite }} --verbosity=2 --parallel
 
   # Tests des vues Django
   views-tests:
@@ -63,7 +60,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -75,11 +72,8 @@ jobs:
 
       - name: Run views tests
         run: |
-          python DreamProject/manage.py test diary.tests.test_views --verbosity=2 --parallel
-        env:
-          DEBUG: "False"
-          GROQ_API_KEY: "test-secret-key-for-ci"
-          MISTRAL_API_KEY: "test-secret-key-for-ci"
+          cd DreamProject
+          python manage.py test diary.tests.test_views --verbosity=2 --parallel
 
   # Tests IA (seulement si demandé explicitement ou extended)
   ai-tests:
@@ -93,7 +87,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -105,11 +99,8 @@ jobs:
 
       - name: Run AI tests
         run: |
-          python DreamProject/manage.py test diary.tests.test_ai_functions --verbosity=2 --parallel
-        env:
-          DEBUG: "False"
-          GROQ_API_KEY: "test-secret-key-for-ci"
-          MISTRAL_API_KEY: "test-secret-key-for-ci"
+          cd DreamProject
+          python manage.py test diary.tests.test_ai_functions --verbosity=2 --parallel
 
   # Métriques de qualité
   quality-metrics:
@@ -122,7 +113,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
