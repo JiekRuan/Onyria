@@ -135,12 +135,14 @@
       <h3 class="text-lg font-semibold mb-4 text-center">Supprimer ce rêve ?</h3>
       <p class="text-sm text-gray-600 mb-6 text-center">Cette action est définitive et ne peut pas être annulée.</p>
       <div class="button-group-center">
-        <button onclick="closeDeleteModal()" class="btn-ballon-sm btn-ballon-light">Annuler</button>
+        <button onclick="closeDeleteModal()" class="btn-ballon-sm">Annuler</button>
         <button id="confirmDeleteBtn" class="btn-ballon-sm">Supprimer</button>
       </div>
     </div>
   </div>
 </div>
+
+{% csrf_token %}
 
 
 <!-- Script -->
@@ -227,9 +229,26 @@ function closeDeleteModal() {
   document.getElementById('deleteModal').classList.add('hidden');
 }
 
-function confirmDelete(dreamId) {
-  console.log('Suppression du rêve:', dreamId);
-  // Ici - ajouter l'appel AJAX vers votre vue delete_dream
+async function confirmDelete(dreamId) {
+  try {
+    const response = await fetch(`/diary/delete/${dreamId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (response.ok) {
+      // Recharger la page pour voir les changements
+      location.reload();
+    } else {
+      alert('Erreur lors de la suppression');
+    }
+  } catch (error) {
+    alert('Erreur réseau');
+  }
+  
   closeDeleteModal();
 }
 
