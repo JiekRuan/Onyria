@@ -44,8 +44,8 @@ ALLOWED_HOSTS = [
     if h.strip()
 ]
 
-# En production, ALLOWED_HOSTS ne peut pas être vide
-if not DEBUG and not ALLOWED_HOSTS:
+# En production, ALLOWED_HOSTS ne peut pas être vide (mais OK en tests)
+if not DEBUG and not ALLOWED_HOSTS and not IS_CI_OR_TEST:
     raise ValueError("ALLOWED_HOSTS doit être défini quand DEBUG=False")
 
 # Configuration IA et modèles - centralisée pour faciliter la maintenance
