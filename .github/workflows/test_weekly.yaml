@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -39,11 +39,8 @@ jobs:
 
       - name: Run integration tests
         run: |
-          python DreamProject/manage.py test diary.tests.test_integration --verbosity=2 --keepdb
-        env:
-          DEBUG: "False"
-          GROQ_API_KEY: "fake-key-for-ci"
-          MISTRAL_API_KEY: "fake-key-for-ci"
+          cd DreamProject
+          python manage.py test diary.tests.test_integration --verbosity=2 --keepdb
 
   ai-testing:
     name: "Tests des IA"
@@ -55,7 +52,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -67,11 +64,8 @@ jobs:
 
       - name: Run complete AI tests
         run: |
-          python DreamProject/manage.py test diary.tests.test_ai_functions --verbosity=2 --keepdb
-        env:
-          DEBUG: "False"
-          GROQ_API_KEY: "fake-key-for-ci"
-          MISTRAL_API_KEY: "fake-key-for-ci"
+          cd DreamProject
+          python manage.py test diary.tests.test_ai_functions --verbosity=2 --keepdb
 
   # Audit de sécurité complet
   security-audit:
@@ -83,7 +77,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -106,10 +100,8 @@ jobs:
 
       - name: Run security tests
         run: |
-          python DreamProject/manage.py test diary.tests.test_security --verbosity=2
-        env:
-          SECRET_KEY: "test-secret-key-for-ci"
-          DEBUG: "False"
+          cd DreamProject
+          python manage.py test diary.tests.test_security --verbosity=2
 
   # Rapport de couverture complet
   coverage-report:
@@ -123,7 +115,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
@@ -136,15 +128,12 @@ jobs:
 
       - name: Run all tests with coverage
         run: |
-          coverage run --source='DreamProject/diary' --omit='*/migrations/*,*/tests/*' DreamProject/manage.py test diary.tests --verbosity=1 --parallel
+          cd DreamProject
+          coverage run --source='diary' --omit='*/migrations/*,*/tests/*' manage.py test diary.tests --verbosity=1 --parallel
           coverage report --show-missing
           coverage html
           coverage xml
           coverage-badge -f -o coverage.svg
-        env:
-          DEBUG: "False"
-          GROQ_API_KEY: "fake-key-for-ci"
-          MISTRAL_API_KEY: "fake-key-for-ci"
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
@@ -180,7 +169,7 @@ jobs:
           TOTAL=0
           SUCCESS=0
 
-          for result in "${{ needs.integration-tests.result }}" "${{ needs.ai-testing.result }}" "${{ needs.multi-python-tests.result }}"; do
+          for result in "${{ needs.integration-tests.result }}" "${{ needs.ai-testing.result }}" "${{ needs.security-audit.result }}"; do
             TOTAL=$((TOTAL + 1))
             if [[ "$result" == "success" ]]; then
               SUCCESS=$((SUCCESS + 1))
