@@ -7,4 +7,5 @@ urlpatterns = [
     path('analyse_from_voice/', views.analyse_from_voice, name='analyse_from_voice'),
     path('followup/', views.dream_followup, name='dream_followup'),
     path('dream/<int:dream_id>/', views.dream_detail_view, name='dream_detail'),
+    path('delete/<int:dream_id>/', views.delete_dream, name='delete_dream'),
 ]

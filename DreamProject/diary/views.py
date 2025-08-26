@@ -5,7 +5,7 @@ import logging
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from .models import Dream
@@ -56,6 +56,18 @@ def dream_diary_view(request):
             **stats,  # déstructure les clés du dict `stats` directement dans le contexte
         },
     )
+
+@login_required
+@require_POST
+def delete_dream(request, dream_id):
+    try:
+        dream = Dream.objects.get(id=dream_id, user=request.user)
+        dream.delete()
+        return JsonResponse({'success': True})
+    except Dream.DoesNotExist:
+        return JsonResponse({'error': 'Rêve introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': 'Erreur lors de la suppression'}, status=500)
 
 
 @login_required
