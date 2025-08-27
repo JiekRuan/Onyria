@@ -22,10 +22,10 @@ ROOT_DIR = BASE_DIR.parent                                  # racine du dépôt
 # Charger le .env à la racine du dépôt (utile en local/prod)
 load_dotenv(ROOT_DIR / ".env")
 
-# Contexte tests/CI (GitHub Actions, etc.)
-IS_CI_OR_TEST = ("test" in sys.argv) or os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true"
+# Contexte CI seulement (pas les tests locaux)
+IS_CI_OR_TEST = os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true"
 
-# Configuration sécurisée - SECRET_KEY obligatoire (fallback uniquement en CI/tests)
+# Configuration sécurisée - SECRET_KEY obligatoire (fallback uniquement en CI)
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     if IS_CI_OR_TEST:
@@ -33,7 +33,7 @@ if not SECRET_KEY:
     else:
         raise ValueError("SECRET_KEY doit être définie (variable d'environnement ou .env)")
 
-# DEBUG désactivé par défaut, mais activé par défaut en CI/tests pour éviter les blocages de checks stricts
+# DEBUG désactivé par défaut, mais activé par défaut en CI pour éviter les blocages de checks stricts
 DEBUG = os.getenv("DEBUG", "True" if IS_CI_OR_TEST else "False").lower() == "true"
 
 # Analyse des ALLOWED_HOSTS depuis l'env permettant virgules et/ou espaces, sans schémas
@@ -44,7 +44,7 @@ ALLOWED_HOSTS = [
     if h.strip()
 ]
 
-# En production, ALLOWED_HOSTS ne peut pas être vide (mais OK en tests)
+# En production, ALLOWED_HOSTS ne peut pas être vide (mais OK en CI)
 if not DEBUG and not ALLOWED_HOSTS and not IS_CI_OR_TEST:
     raise ValueError("ALLOWED_HOSTS doit être défini quand DEBUG=False")
 
