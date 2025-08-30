@@ -690,30 +690,34 @@ def generate_image_from_text(user, prompt_text, dream_instance):
 
 # Configuration BERTopic avec paramètres ajustés pour petits datasets
 try:
-    # Modèle d'embeddings optimisé pour le français
-    embedding_model = SentenceTransformer(
-        'paraphrase-multilingual-MiniLM-L12-v2'
-    )
+    if 'test' in sys.argv or getattr(settings, 'TESTING', False):
+        BERTOPIC_AVAILABLE = False
+        logger.info("BERTopic désactivé en mode test")
+    else:
+        # Modèle d'embeddings optimisé pour le français
+        embedding_model = SentenceTransformer(
+            'paraphrase-multilingual-MiniLM-L12-v2'
+        )
 
-    # UMAP avec paramètres pour petits datasets
-    umap_model = UMAP(
-        n_neighbors=2,  # Très petit pour gérer peu de documents
-        n_components=2,  # Réduction à 2D
-        min_dist=0.0,
-        metric='cosine',
-        random_state=42,
-    )
+        # UMAP avec paramètres pour petits datasets
+        umap_model = UMAP(
+            n_neighbors=2,  # Très petit pour gérer peu de documents
+            n_components=2,  # Réduction à 2D
+            min_dist=0.0,
+            metric='cosine',
+            random_state=42,
+        )
 
-    # HDBSCAN avec paramètres très permissifs
-    hdbscan_model = HDBSCAN(
-        min_cluster_size=2,  # Minimum 2 rêves par cluster
-        min_samples=1,  # Très permissif
-        metric='euclidean',
-        cluster_selection_method='eom',
-    )
+        # HDBSCAN avec paramètres très permissifs
+        hdbscan_model = HDBSCAN(
+            min_cluster_size=2,  # Minimum 2 rêves par cluster
+            min_samples=1,  # Très permissif
+            metric='euclidean',
+            cluster_selection_method='eom',
+        )
 
-    BERTOPIC_AVAILABLE = True
-    logger.info("BERTopic configuré pour petits datasets")
+        BERTOPIC_AVAILABLE = True
+        logger.info("BERTopic configuré pour petits datasets")
 
 except ImportError:
     logger.warning("BERTopic non disponible")
