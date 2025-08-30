@@ -82,8 +82,8 @@ jobs:
           flake8 DreamProject/diary/ --count --exit-zero --max-complexity=10 --statistics
       
       - name: Run coverage analysis
+        working-directory: DreamProject
         run: |
-          cd DreamProject
           echo "Analyse de couverture..."
           coverage run --source='diary' manage.py test diary.tests.test_models diary.tests.test_utils diary.tests.test_views
           coverage report --show-missing
