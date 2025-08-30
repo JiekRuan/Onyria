@@ -118,7 +118,8 @@ jobs:
         working-directory: DreamProject
         run: |
           echo "Analyse de couverture complète..."
-          coverage run --source='diary' --omit='*/migrations/*,*/tests/*' manage.py test diary.tests --verbosity=1 --parallel
+          # Utiliser --keepdb pour éviter la recréation de la base
+          coverage run --source='diary' --omit='*/migrations/*,*/tests/*' manage.py test diary.tests --verbosity=1 --keepdb
           coverage report --show-missing
           coverage html
           coverage xml
