@@ -21,8 +21,16 @@ from django.conf import settings
 from groq import Groq
 from mistralai import Mistral
 from collections import Counter, defaultdict
+from bertopic import BERTopic
+from sklearn.feature_extraction.text import CountVectorizer
+from sentence_transformers import SentenceTransformer
 from .models import Dream
-from .constants import THEME_CATEGORIES
+from .constants import DREAM_SPECIFIC_STOPWORDS
+from bertopic import BERTopic
+from sklearn.feature_extraction.text import CountVectorizer
+from sentence_transformers import SentenceTransformer
+from umap import UMAP
+from hdbscan import HDBSCAN
 
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
@@ -49,151 +57,41 @@ except ImportError:
     FRENCH_STOPWORDS = set()
     stemmer = None
 
-DREAM_SPECIFIC_STOPWORDS = {
-    # Mots du rêve
-    'rêve',
-    'rêver',
-    'dormir',
-    'nuit',
-    'moment',
-    'fois',
-    'chose',
-    'truc',
-    'machin',
-    'endroit',
-    'côté',
-    'genre',
-    'espèce',
-    'sorte',
-    'façon',
-    'maniÃ¨re',
-    'air',
-    'impression',
-    'sentiment',
-    'sensation',
-    'souvenir',
-    'souviens',
-    'rappelle',
-    'crois',
-    'pense',
-    'imagine',
-    'semble',
-    # Verbes trop génériques
-    'faire',
-    'avoir',
-    'être',
-    'aller',
-    'dire',
-    'voir',
-    'savoir',
-    'pouvoir',
-    'vouloir',
-    'devoir',
-    'prendre',
-    'donner',
-    'mettre',
-    'partir',
-    'venir',
-    'arriver',
-    'passer',
-    'rester',
-    'devenir',
-    'porter',
-    'regarder',
-    'entendre',
-    'sentir',
-    'trouver',
-    'laisser',
-    'suivre',
-    'montrer',
-    'demander',
-    'parler',
-    'tenir',
-    'jouer',
-    'tourner',
-    'ouvrir',
-    'fermer',
-    'commencer',
-    'finir',
-    # Mots de liaison et adverbes
-    'puis',
-    'après',
-    'avant',
-    'pendant',
-    'soudain',
-    'tout',
-    'très',
-    'bien',
-    'mal',
-    'plus',
-    'moins',
-    'encore',
-    'déjà',
-    'toujours',
-    'jamais',
-    'parfois',
-    'souvent',
-    'beaucoup',
-    'peu',
-    'assez',
-    'trop',
-    'vraiment',
-    'plutôt',
-    # Mots vagues
-    'personne',
-    'quelqu',
-    'quelque',
-    'quelquun',
-    'part',
-    'endroit',
-    'lieu',
-    'temps',
-    'année',
-    'jour',
-    'heure',
-    'minute',
-    'seconde',
-    'vie',
-    'mort',
-    'histoire',
-    'situation',
-    'problème',
-    'question',
-    'réponse',
-    'idée',
-}
+# Configuration BERTopic
+try:
+    # Modèle de sentence embeddings multilingue optimisé pour le français
+    embedding_model = SentenceTransformer(
+        'paraphrase-multilingual-MiniLM-L12-v2'
+    )
 
-# Verbes d'action spécifiques qu'on veut garder (actions significatives dans les rêves)
-SIGNIFICANT_DREAM_VERBS = {
-    'voler',
-    'tomber',
-    'courir',
-    'fuir',
-    'poursuivre',
-    'chaser',
-    'nager',
-    'escalader',
-    'grimper',
-    'danser',
-    'chanter',
-    'crier',
-    'pleurer',
-    'rire',
-    'embrasser',
-    'frapper',
-    'tuer',
-    'mourir',
-    'naître',
-    'marier',
-    'divorcer',
-    'conduire',
-    'voyager',
-    'partir',
-    'explorer',
-    'chercher',
-    'cacher',
-}
+    # Vectorizer personnalisé pour filtrer les mots non significatifs
+    vectorizer_model = CountVectorizer(
+        ngram_range=(1, 2),  # Unigrammes et bigrammes
+        stop_words=list(FRENCH_STOPWORDS) if FRENCH_STOPWORDS else None,
+        min_df=2,  # Au moins 2 occurrences
+        max_df=0.8,  # Maximum 80% des documents
+        vocabulary=None,
+    )
 
+    # Configuration BERTopic pour les rêves
+    bertopic_model = BERTopic(
+        embedding_model=embedding_model,
+        vectorizer_model=vectorizer_model,
+        min_topic_size=2,  # Minimum 2 rêves pour créer un thème
+        nr_topics='auto',  # Nombre automatique de thèmes
+        calculate_probabilities=True,
+        language="french",
+    )
+
+    logger.info("BERTopic configuré avec succès")
+    BERTOPIC_AVAILABLE = True
+
+except ImportError:
+    logger.warning(
+        "BERTopic non disponible. Installer avec: pip install bertopic sentence-transformers"
+    )
+    BERTOPIC_AVAILABLE = False
+    bertopic_model = None
 
 # Constantes de configuration
 WHISPER_MODEL = "whisper-large-v3-turbo"
@@ -769,25 +667,133 @@ def generate_image_from_text(user, prompt_text, dream_instance):
 
 # ---------- THEMATIQUE ----------
 
+# Configuration BERTopic avec paramètres ajustés pour petits datasets(pour quand le user vient de créer son compte)
+try:
 
-def _extract_significant_words(text: str) -> List[str]:
-    """Extrait uniquement les mots potentiellement significatifs"""
+    # Modèle d'embeddings optimisé pour le français
+    embedding_model = SentenceTransformer(
+        'paraphrase-multilingual-MiniLM-L12-v2'
+    )
+
+    # UMAP avec paramètres pour petits datasets
+    umap_model = UMAP(
+        n_neighbors=2,  # Très petit pour gérer peu de documents
+        n_components=2,  # Réduction à 2D
+        min_dist=0.0,
+        metric='cosine',
+        random_state=42,
+    )
+
+    # HDBSCAN avec paramètres très permissifs
+    hdbscan_model = HDBSCAN(
+        min_cluster_size=2,  # Minimum 2 rêves par cluster
+        min_samples=1,  # Très permissif
+        metric='euclidean',
+        cluster_selection_method='eom',
+    )
+
+    BERTOPIC_AVAILABLE = True
+    logger.info("BERTopic configuré pour petits datasets")
+
+except ImportError:
+    logger.warning("BERTopic non disponible")
+    BERTOPIC_AVAILABLE = False
+
+# Catégories thématiques de base pour l'approche hybride
+BASIC_THEME_CATEGORIES = {
+    'voyage': [
+        'train',
+        'avion',
+        'bateau',
+        'bus',
+        'voiture',
+        'gare',
+        'aéroport',
+        'voyage',
+        'voyager',
+        'route',
+    ],
+    'famille': [
+        'mère',
+        'père',
+        'parent',
+        'frère',
+        'sœur',
+        'enfant',
+        'famille',
+        'maman',
+        'papa',
+    ],
+    'travail': [
+        'bureau',
+        'travail',
+        'patron',
+        'collègue',
+        'entreprise',
+        'réunion',
+        'projet',
+    ],
+    'école': [
+        'école',
+        'classe',
+        'professeur',
+        'élève',
+        'cours',
+        'examen',
+        'université',
+    ],
+    'maison': [
+        'maison',
+        'chambre',
+        'cuisine',
+        'salon',
+        'lit',
+        'porte',
+        'fenêtre',
+    ],
+    'amour': [
+        'amour',
+        'copain',
+        'copine',
+        'mari',
+        'femme',
+        'baiser',
+        'embrasser',
+    ],
+    'peur': ['peur', 'panique', 'fuir', 'courir', 'danger', 'monstre', 'noir'],
+    'Mer': [
+        'eau',
+        'mer',
+        'piscine',
+        'nager',
+        'rivière',
+        'pluie',
+        'inondation',
+    ],
+    'animaux': ['chien', 'chat', 'oiseau', 'animal', 'serpent', 'cheval'],
+}
+
+def _preprocess_for_analysis(text: str) -> str:
+    """Préprocesse le texte avec spaCy pour analyse thématique"""
     if not nlp or not text:
-        return _fallback_extract_words(text)
+        return _basic_preprocess(text)
 
     text = text.lower()
     text = re.sub(r'[^\w\s]', ' ', text)
 
     doc = nlp(text)
-    words = []
+    significant_tokens = []
 
     for token in doc:
         lemma = token.lemma_.lower()
 
-        # Garder principalement les noms et quelques verbes/adjectifs spécifiques
+        # Focus sur les noms principalement + quelques verbes d'action
         if (
             token.pos_ in ['NOUN', 'PROPN']
-            or (token.pos_ == 'VERB' and lemma in SIGNIFICANT_DREAM_VERBS)
+            or (
+                token.pos_ == 'VERB'
+                and lemma in ['voler', 'tomber', 'courir', 'fuir', 'nager']
+            )
             or (token.pos_ == 'ADJ' and len(lemma) >= 5)
         ):
 
@@ -797,87 +803,152 @@ def _extract_significant_words(text: str) -> List[str]:
                 and lemma not in DREAM_SPECIFIC_STOPWORDS
                 and not lemma.isdigit()
                 and token.is_alpha
+                and not any(
+                    reject in lemma
+                    for reject in ['fair', 'avoir', 'être', 'aller']
+                )
             ):
 
-                words.append(lemma)
+                significant_tokens.append(lemma)
 
-    return words
+    return ' '.join(significant_tokens)
 
 
-def _fallback_extract_words(text: str) -> List[str]:
-    """Version fallback sans spaCy"""
+def _basic_preprocess(text: str) -> str:
+    """Préprocessing basique sans spaCy"""
     if not text:
-        return []
+        return ""
 
     text = text.lower()
     text = re.sub(r'[^\w\s]', ' ', text)
     tokens = text.split()
 
-    words = []
+    filtered = []
     for token in tokens:
         if (
             len(token) >= 4
             and token not in FRENCH_STOPWORDS
             and token not in DREAM_SPECIFIC_STOPWORDS
             and not token.isdigit()
-            and token.isalpha()
         ):
+            filtered.append(token)
 
-            if stemmer:
-                stemmed = stemmer.stem(token)
-                if len(stemmed) >= 3:
-                    words.append(stemmed)
-            else:
-                words.append(token)
-
-    return words
+    return ' '.join(filtered)
 
 
-def _categorize_words_by_theme(words: List[str]) -> dict:
-    """Catégorise les mots par thèmes"""
-    theme_matches = {}
+def _bertopic_analysis(dream_texts: List[str], total_dreams: int):
+    """Analyse BERTopic pour datasets moyens/grands (8+ rêves)"""
+    if not BERTOPIC_AVAILABLE or total_dreams < 8:
+        return None
 
-    for theme_name, keywords in THEME_CATEGORIES.items():
-        matching_words = []
+    # Préprocesser les textes
+    preprocessed_texts = []
+    for text in dream_texts:
+        cleaned = _preprocess_for_analysis(text)
+        if len(cleaned.strip()) > 10:
+            preprocessed_texts.append(cleaned)
 
-        for word in words:
-            for keyword in keywords:
-                # Correspondance flexible : exacte ou inclusion partielle
-                if (
-                    word == keyword
-                    or keyword in word
-                    or word in keyword
-                    or (
-                        stemmer and stemmer.stem(word) == stemmer.stem(keyword)
-                    )
-                ):
-                    matching_words.append(word)
-                    break
+    if len(preprocessed_texts) < 5:
+        logger.info("Pas assez de textes valides pour BERTopic, fallback")
+        return None
 
-        if matching_words:
-            theme_matches[theme_name] = len(set(matching_words))
+    try:
+        # Vectorizer adapté
+        vectorizer = CountVectorizer(
+            ngram_range=(1, 2),
+            stop_words=list(FRENCH_STOPWORDS) if FRENCH_STOPWORDS else None,
+            min_df=1,  # Plus permissif
+            max_df=0.9,
+            max_features=50,  # Limiter pour petits datasets
+        )
 
-    return theme_matches
+        # BERTopic avec paramètres adaptés
+        topic_model = BERTopic(
+            embedding_model=embedding_model,
+            umap_model=umap_model,
+            hdbscan_model=hdbscan_model,
+            vectorizer_model=vectorizer,
+            min_topic_size=2,
+            nr_topics='auto',
+            verbose=False,
+        )
+
+        topics, probabilities = topic_model.fit_transform(preprocessed_texts)
+
+        # Analyser les résultats
+        topic_info = topic_model.get_topic_info()
+        valid_topics = topic_info[topic_info.Topic != -1]
+
+        if len(valid_topics) == 0:
+            return None
+
+        # Extraire les thèmes
+        theme_results = []
+        topic_counts = Counter(topics)
+
+        for topic_id, count in topic_counts.items():
+            if topic_id != -1 and count >= 2:
+                topic_words = topic_model.get_topic(topic_id)
+                if topic_words:
+                    # Prendre les 2-3 mots les plus représentatifs
+                    top_words = [
+                        word for word, score in topic_words[:3] if score > 0.1
+                    ]
+                    if top_words:
+                        theme_name = ' & '.join(
+                            top_words[:2]
+                        )  # Maximum 2 mots
+                        theme_results.append((theme_name, count))
+
+        return sorted(theme_results, key=lambda x: x[1], reverse=True)
+
+    except Exception as e:
+        logger.error(f"Erreur BERTopic: {e}")
+        return None
 
 
-def _calculate_theme_document_frequency(dream_texts: List[str]) -> Counter:
-    """Calcule la fréquence des thèmes par document (rêve)"""
+def _category_analysis(dream_texts: List[str], total_dreams: int):
+    """Analyse par catégories prédéfinies pour petits datasets"""
     theme_document_freq = Counter()
 
     for dream_text in dream_texts:
-        words = _extract_significant_words(dream_text)
-        theme_matches = _categorize_words_by_theme(words)
+        words = _preprocess_for_analysis(dream_text).split()
 
-        # Marquer la présence de chaque thème dans ce rêve
-        for theme_name, match_count in theme_matches.items():
-            if match_count > 0:  # Au moins un mot de cette catégorie
-                theme_document_freq[theme_name] += 1
+        # Détecter les catégories présentes dans ce rêve
+        detected_categories = set()
 
-    return theme_document_freq
+        for category, keywords in BASIC_THEME_CATEGORIES.items():
+            for word in words:
+                for keyword in keywords:
+                    if (
+                        word == keyword
+                        or keyword in word
+                        or word in keyword
+                        or (
+                            stemmer
+                            and len(word) > 3
+                            and len(keyword) > 3
+                            and stemmer.stem(word) == stemmer.stem(keyword)
+                        )
+                    ):
+                        detected_categories.add(category)
+                        break
+
+        # Compter chaque catégorie une fois par rêve
+        for category in detected_categories:
+            theme_document_freq[category] += 1
+
+    # Retourner les thèmes récurrents
+    recurring_themes = [
+        (theme, count)
+        for theme, count in theme_document_freq.items()
+        if count >= 2
+    ]
+    return sorted(recurring_themes, key=lambda x: x[1], reverse=True)
 
 
 def analyze_recurring_themes(user, min_dreams=2, min_occurrence=2):
-    """Analyse les thématiques récurrentes par catégories conceptuelles"""
+    """Analyse adaptative selon le volume de données"""
     logger.info(f"Analyse thématiques récurrentes user {user.id}")
 
     dreams = (
@@ -897,17 +968,23 @@ def analyze_recurring_themes(user, min_dreams=2, min_occurrence=2):
             'message': f'Au moins {min_dreams} rêves nécessaires',
         }
 
-    # Calculer la fréquence documentaire des thèmes
-    theme_freq = _calculate_theme_document_frequency(dream_texts)
+    # Stratégie adaptative selon le volume
+    if total_dreams >= 10:
+        logger.info("Dataset important : tentative BERTopic")
+        themes = _bertopic_analysis(dream_texts, total_dreams)
+        method = "BERTopic"
+    else:
+        logger.info("Dataset petit : analyse par catégories")
+        themes = None
+        method = "Catégories"
 
-    # Filtrer les thèmes récurrents
-    recurring_themes = [
-        (theme, freq)
-        for theme, freq in theme_freq.items()
-        if freq >= min_occurrence
-    ]
+    # Fallback vers catégories si BERTopic échoue
+    if not themes:
+        logger.info("Fallback vers analyse par catégories")
+        themes = _category_analysis(dream_texts, total_dreams)
+        method = "Catégories"
 
-    if not recurring_themes:
+    if not themes:
         return {
             'top_theme': 'Aucune récurrence détectée',
             'percentage': 0,
@@ -915,23 +992,20 @@ def analyze_recurring_themes(user, min_dreams=2, min_occurrence=2):
             'message': 'Pas de thématique récurrente trouvée',
         }
 
-    # Trier par fréquence décroissante
-    recurring_themes.sort(key=lambda x: x[1], reverse=True)
-
-    # Prendre le thème principal
-    top_theme_name, top_theme_count = recurring_themes[0]
+    # Thème principal
+    top_theme_name, top_theme_count = themes[0]
     top_theme_percentage = round((top_theme_count / total_dreams) * 100, 1)
 
     logger.info(
-        f"Thème récurrent détecté: {top_theme_name} ({top_theme_percentage}%)"
+        f"Thème détecté ({method}): {top_theme_name} ({top_theme_percentage}%)"
     )
 
     return {
         'top_theme': top_theme_name.capitalize(),
         'percentage': top_theme_percentage,
         'total_dreams': total_dreams,
-        'all_themes': recurring_themes[:10],
-        'message': f'{len(recurring_themes)} thématiques récurrentes trouvées',
+        'all_themes': themes[:10],
+        'message': f'{len(themes)} thématiques trouvées ({method})',
     }
 
 
