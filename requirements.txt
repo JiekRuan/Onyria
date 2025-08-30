@@ -113,6 +113,7 @@ srsly==2.5.1
 stack-data==0.6.3
 sympy==1.14.0
 tailwindcss==0.0.1
+tblib==3.1.0
 thinc==8.3.6
 threadpoolctl==3.6.0
 tinycss2==1.4.0
@@ -135,4 +136,5 @@ webencodings==0.5.1
 whitenoise==6.9.0
 wrapt==1.17.3
 yarg==0.1.9
+
 
