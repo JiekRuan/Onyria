@@ -446,8 +446,8 @@ class DreamModelTest(TestCase):
             try:
                 with transaction.atomic():
                     thread_user = User.objects.create_user(
-                        email=f'thread_{thread_id}@test.com',
-                        username=f'thread_user_{thread_id}',
+                        email=f'thread_{thread_id}@concurrent.test',
+                        username=f'thread_user_{thread_id}_{int(time.time() * 1000)}',  # Ajouter timestamp pour unicité
                         password=TEST_USER_PASSWORD,
                     )
                 for i in range(dreams_per_thread):

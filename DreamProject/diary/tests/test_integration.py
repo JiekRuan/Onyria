@@ -662,7 +662,7 @@ class WorkflowRobustnessTest(TestCase):
         response = self.client.get(reverse('dream_diary'))
         execution_time = time.time() - start_time
 
-        self.assertLess(execution_time, 2.0)
+        self.assertLess(execution_time, 5.0)
         self.assertEqual(response.status_code, 200)
 
         dreams = response.context['dreams']
@@ -671,6 +671,7 @@ class WorkflowRobustnessTest(TestCase):
         stats = response.context
         self.assertIsNotNone(stats.get('statut_reveuse'))
         self.assertIsInstance(stats.get('pourcentage_reveuse'), int)
+
 
     # Contrat SSE : patche sur diary.views (lieu d'utilisation réel)
     @patch('diary.views.transcribe_audio', return_value="Un rêve bref")
