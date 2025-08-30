@@ -1,6 +1,9 @@
 name: Daily Tests
 
 on:
+  push: 
+    branches: 
+      - fix-workflows-ko
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
