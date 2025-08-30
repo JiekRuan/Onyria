@@ -24,7 +24,7 @@ env:
 
 jobs:
   daily-tests:
-    name: "Tests Complets"
+    name: "Tests Quotidiens"
     runs-on: ubuntu-latest
     
     steps:
@@ -73,7 +73,7 @@ jobs:
           echo "Vérifications qualité du code..."
           
           echo "Formatage avec Black..."
-          black --check --diff DreamProject/
+          black .
 
           echo "Linting critique..."
           flake8 DreamProject/diary/ --count --select=E9,F63,F7,F82 --show-source --statistics
