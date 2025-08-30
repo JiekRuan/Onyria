@@ -5,12 +5,11 @@ import logging
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from .models import Dream
-from collections import Counter
 from .utils import (
-    transcribe_audio,
     analyze_emotions,
     classify_dream,
     interpret_dream,
@@ -20,27 +19,16 @@ from .utils import (
     get_dream_type_timeline_filtered,
     get_emotions_stats_filtered,
     get_emotions_timeline_filtered,
+    format_emotion_label,
+    format_dream_type_label,
+    transcribe_audio,
 )
 from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS, DREAM_ERROR_MESSAGE
 
 logger = logging.getLogger(__name__)
 
-# ---------- Normalisation labels : garantit une CHAÎNE ----------
-def _as_str_label(val):
-    """
-    Garantit un string pour les labels envoyés au frontend/tests.
-    - Si liste/tuple -> prend le 1er élément
-    - Sinon -> cast en string si besoin
-    """
-    if isinstance(val, (list, tuple)):
-        if not val:
-            return ""
-        val = val[0]
-    return val if isinstance(val, str) else str(val)
-# ---------------------------------------------------------------
 
-
-# ----- Vues principales ----- #
+# ----- VUES PRINCIPALES ----- #
 
 
 @login_required
@@ -53,15 +41,12 @@ def dream_diary_view(request):
     # Formatage des labels pour l'affichage
     emotion_dominante = stats.get('emotion_dominante')
     if emotion_dominante:
-        stats['emotion_dominante'] = EMOTION_LABELS.get(
-            emotion_dominante, emotion_dominante.capitalize()
-        )
+        stats['emotion_dominante'] = format_emotion_label(emotion_dominante)
 
     statut_reveuse = stats.get('statut_reveuse')
     if statut_reveuse:
-        stats['statut_reveuse'] = DREAM_TYPE_LABELS.get(
-            statut_reveuse, statut_reveuse.capitalize()
-        )
+        stats['statut_reveuse'] = format_dream_type_label(statut_reveuse)
+
 
     return render(
         request,
@@ -72,6 +57,18 @@ def dream_diary_view(request):
         },
     )
 
+@login_required
+@require_POST
+def delete_dream(request, dream_id):
+    try:
+        dream = Dream.objects.get(id=dream_id, user=request.user)
+        dream.delete()
+        return JsonResponse({'success': True})
+    except Dream.DoesNotExist:
+        return JsonResponse({'error': 'Rêve introuvable'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': 'Erreur lors de la suppression'}, status=500)
+
 
 @login_required
 def dream_detail_view(request, dream_id):
@@ -80,12 +77,8 @@ def dream_detail_view(request, dream_id):
 
     # Formatage des labels pour l'affichage
     if dream.dominant_emotion:
-        formatted_dominant_emotion = EMOTION_LABELS.get(
-            dream.dominant_emotion, dream.dominant_emotion.capitalize()
-        )
-        formatted_dream_type = DREAM_TYPE_LABELS.get(
-        dream.dream_type, dream.dream_type.capitalize()
-        )
+        formatted_dominant_emotion = format_emotion_label(dream.dominant_emotion)
+        formatted_dream_type = format_dream_type_label(dream.dream_type)
     else:
         formatted_dominant_emotion = "Non analysé"
         formatted_dream_type = "Non analysé"
@@ -114,33 +107,6 @@ def dream_recorder_view(request):
     return render(request, 'diary/dream_recorder.html', {
         'DREAM_ERROR_MESSAGE': DREAM_ERROR_MESSAGE
     })
-
-
-@require_http_methods(["POST"])
-@csrf_exempt
-def transcribe(request):
-    """API : reçoit audio et renvoie texte brut"""
-    if 'audio' in request.FILES:
-        try:
-            audio_file = request.FILES['audio']
-            audio_data = audio_file.read()
-            logger.info(f"Transcription simple demandée - {len(audio_data)} bytes")
-            
-            transcription = transcribe_audio(audio_data)
-            if transcription:
-                logger.info(f"Transcription simple réussie - {len(transcription)} caractères")
-                return JsonResponse(
-                    {'success': True, 'transcription': transcription}
-                )
-            else:
-                logger.error("Échec transcription simple")
-                return JsonResponse(
-                    {'success': False, 'error': 'Échec de la transcription'}
-                )
-        except Exception as e:
-            logger.error(f"Erreur transcription simple: {e}")
-            return JsonResponse({'success': False, 'error': str(e)})
-    return JsonResponse({'success': False, 'error': 'Pas de fichier audio'})
 
 
 @require_http_methods(["POST"])
@@ -180,12 +146,8 @@ def analyse_from_voice(request):
 
             # format "clé brute" (ex: 'joie', 'rêve') -> labels FR
             raw_dominant_key = dominant_emotion[0] if isinstance(dominant_emotion, (list, tuple)) else dominant_emotion
-            formatted_dominant_emotion = EMOTION_LABELS.get(raw_dominant_key, str(raw_dominant_key).capitalize())
-            formatted_dream_type = DREAM_TYPE_LABELS.get(dream_type, dream_type.capitalize())
-
-            # Normalisation stricte : CHAÎNE (string)
-            formatted_dominant_emotion = _as_str_label(formatted_dominant_emotion)
-            formatted_dream_type = _as_str_label(formatted_dream_type)
+            formatted_dominant_emotion = format_emotion_label(raw_dominant_key)
+            formatted_dream_type = format_dream_type_label(dream_type)
 
             # Contrat SSE : renvoyer des strings (ex: 'Joie', 'Rêve')
             yield f"data: {json.dumps({'step': 'emotions', 'data': {'dominant_emotion': formatted_dominant_emotion, 'dream_type': formatted_dream_type}})}\n\n"
@@ -237,7 +199,7 @@ def analyse_from_voice(request):
             yield f"data: {json.dumps({'step': 'interpretation', 'data': {'interpretation': interpretation}})}\n\n"
 
             total_duration = time.time() - start_time
-            if total_duration > 15:
+            if total_duration > settings.AI_CONFIG['SSE_SLOW_WARNING_THRESHOLD']:
                 logger.warning(f"Analyse SSE lente: {total_duration:.2f}s pour user {request.user.id}")
             
             logger.info(f"Analyse SSE user {request.user.id} réussie - Type: {dream_type}, Émotion: {raw_dominant_key} en {total_duration:.2f}s")

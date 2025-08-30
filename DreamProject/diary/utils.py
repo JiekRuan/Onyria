@@ -4,219 +4,37 @@ import math
 import time
 import tempfile
 import logging
-import spacy
-import re
-import nltk
 import httpx
-
-from typing import List
-
 from datetime import datetime, timedelta
 from django.utils import timezone
 from django.core.files.base import ContentFile
 from django.db.models import Count
 from django.db.models.functions import TruncDate
-from dotenv import load_dotenv
 from django.conf import settings
 from groq import Groq
 from mistralai import Mistral
 from collections import Counter, defaultdict
 from .models import Dream
-from .constants import THEME_CATEGORIES
+import unicodedata
+from typing import Any, Mapping, Optional
+from .constants import EMOTION_LABELS, DREAM_TYPE_LABELS
 
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 
-# Chargement des variables d'environnement
-load_dotenv()
-
-logger = logging.getLogger(__name__)
-
-try:
-    nlp = spacy.load("fr_core_news_sm")
-except OSError:
-    logger.warning(
-        "Modèle spaCy français non trouvé. Installer avec: python -m spacy download fr_core_news_sm"
-    )
-    nlp = None
-
-try:
-    nltk.download('stopwords', quiet=True)
-    FRENCH_STOPWORDS = set(stopwords.words('french'))
-    stemmer = SnowballStemmer('french')
-except ImportError:
-    logger.warning("NLTK non disponible. Installer avec: pip install nltk")
-    FRENCH_STOPWORDS = set()
-    stemmer = None
-
-DREAM_SPECIFIC_STOPWORDS = {
-    # Mots du rêve
-    'rêve',
-    'rêver',
-    'dormir',
-    'nuit',
-    'moment',
-    'fois',
-    'chose',
-    'truc',
-    'machin',
-    'endroit',
-    'côté',
-    'genre',
-    'espèce',
-    'sorte',
-    'façon',
-    'maniÃ¨re',
-    'air',
-    'impression',
-    'sentiment',
-    'sensation',
-    'souvenir',
-    'souviens',
-    'rappelle',
-    'crois',
-    'pense',
-    'imagine',
-    'semble',
-    # Verbes trop génériques
-    'faire',
-    'avoir',
-    'être',
-    'aller',
-    'dire',
-    'voir',
-    'savoir',
-    'pouvoir',
-    'vouloir',
-    'devoir',
-    'prendre',
-    'donner',
-    'mettre',
-    'partir',
-    'venir',
-    'arriver',
-    'passer',
-    'rester',
-    'devenir',
-    'porter',
-    'regarder',
-    'entendre',
-    'sentir',
-    'trouver',
-    'laisser',
-    'suivre',
-    'montrer',
-    'demander',
-    'parler',
-    'tenir',
-    'jouer',
-    'tourner',
-    'ouvrir',
-    'fermer',
-    'commencer',
-    'finir',
-    # Mots de liaison et adverbes
-    'puis',
-    'après',
-    'avant',
-    'pendant',
-    'soudain',
-    'tout',
-    'très',
-    'bien',
-    'mal',
-    'plus',
-    'moins',
-    'encore',
-    'déjà',
-    'toujours',
-    'jamais',
-    'parfois',
-    'souvent',
-    'beaucoup',
-    'peu',
-    'assez',
-    'trop',
-    'vraiment',
-    'plutôt',
-    # Mots vagues
-    'personne',
-    'quelqu',
-    'quelque',
-    'quelquun',
-    'part',
-    'endroit',
-    'lieu',
-    'temps',
-    'année',
-    'jour',
-    'heure',
-    'minute',
-    'seconde',
-    'vie',
-    'mort',
-    'histoire',
-    'situation',
-    'problème',
-    'question',
-    'réponse',
-    'idée',
-}
-
-# Verbes d'action spécifiques qu'on veut garder (actions significatives dans les rêves)
-SIGNIFICANT_DREAM_VERBS = {
-    'voler',
-    'tomber',
-    'courir',
-    'fuir',
-    'poursuivre',
-    'chaser',
-    'nager',
-    'escalader',
-    'grimper',
-    'danser',
-    'chanter',
-    'crier',
-    'pleurer',
-    'rire',
-    'embrasser',
-    'frapper',
-    'tuer',
-    'mourir',
-    'naître',
-    'marier',
-    'divorcer',
-    'conduire',
-    'voyager',
-    'partir',
-    'explorer',
-    'chercher',
-    'cacher',
-}
-
-
-# Constantes de configuration
-WHISPER_MODEL = "whisper-large-v3-turbo"
-DEFAULT_TEMPERATURE = 0.0
-MAX_FALLBACK_RETRIES = 3
-IMAGE_GENERATION_MODEL = "mistral-medium-2505"
-
-# nouveau: paramètres de retry pour la transcription
-TRANSCRIBE_MAX_RETRIES = 3
-TRANSCRIBE_BACKOFF_BASE = 1.5  # secondes (exponentiel: 1.5, 2.25, 3.38...)
-
+# Récupération de la configuration centralisée
+AI_CONFIG = settings.AI_CONFIG
 BASE_DIR = settings.BASE_DIR
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
 
-# Clients externes
+# Clients externes avec garde-fou contre les clés manquantes
 groq_client = Groq(
-    api_key=GROQ_API_KEY,
-    http_client=httpx.Client(http2=False, timeout=30),  # HTTP/1.1 + timeout ↑
-)
-mistral_client = Mistral(api_key=MISTRAL_API_KEY)
+    api_key=settings.GROQ_API_KEY,
+    http_client=httpx.Client(http2=False, timeout=AI_CONFIG['API_TIMEOUT'])
+) if settings.GROQ_API_KEY else None
 
-# ---------- UTILS ----------
+mistral_client = Mistral(api_key=settings.MISTRAL_API_KEY) if settings.MISTRAL_API_KEY else None
+
+# ---------- FONCTIONS UTILITAIRES ----------
 
 
 def read_file(file_path):
@@ -235,8 +53,10 @@ def softmax(preds):
 
 def validate_and_fix_interpretation(interpretation_data):
     """
-    Valide et corrige le format de l'interprétation si nécessaire
-    Garantit un format cohérent avec des valeurs string
+    Valide et corrige le format de l'interprétation si nécessaire.
+    - Vérifie la présence des 4 clés attendues.
+    - Extrait le texte depuis des objets {contenu: ...} ou {content: ...}.
+    - Garantit un format cohérent avec des valeurs texte (str).
     """
     if interpretation_data is None:
         logger.warning("Interprétation None reçue")
@@ -258,25 +78,27 @@ def validate_and_fix_interpretation(interpretation_data):
         if key in interpretation_data:
             value = interpretation_data[key]
 
-            # Si c'est un objet avec 'contenu', extraire le contenu
+            # Si c'est un objet avec 'contenu', extraire le texte
             if isinstance(value, dict) and 'contenu' in value:
                 fixed_interpretation[key] = value['contenu']
                 logger.debug(f"Extraction contenu pour {key}")
-            # Si c'est un objet avec 'content', extraire le content
+
+            # Si c'est un objet avec 'content', extraire le texte
             elif isinstance(value, dict) and 'content' in value:
                 fixed_interpretation[key] = value['content']
                 logger.debug(f"Extraction content pour {key}")
-            # Si c'est déjà une string, la garder
+
+            # Si c'est déjà une chaîne, la conserver telle quelle
             elif isinstance(value, str):
                 fixed_interpretation[key] = value
-            # Sinon, convertir en string
+
             else:
-                fixed_interpretation[key] = str(value)
-                logger.warning(
-                    f"Conversion forcée en string pour {key}: {type(value)}"
-                )
+                # Coercition robuste en chaîne
+                fixed_interpretation[key] = _to_str(value)
+                logger.warning(f"Conversion forcée en string pour {key}: {type(value)}")
+
         else:
-            # Clé manquante, ajouter un placeholder
+            # Clé manquante, ajouter un placeholder explicite
             fixed_interpretation[key] = "Interprétation non disponible"
             logger.warning(f"Clé manquante: {key}")
 
@@ -284,11 +106,10 @@ def validate_and_fix_interpretation(interpretation_data):
     return fixed_interpretation
 
 
-# ---------- RETRY SYSTEM ----------
-
+# ---------- SYSTÈME DE RETRY ----------
 
 def _is_retryable_transcription_error(err: Exception) -> bool:
-    """nouveau: détecte les erreurs réseau/temporaires qui méritent un retry"""
+    """Détecte les erreurs réseau/temporaires qui méritent un retry"""
     msg = str(err).lower()
     keywords = [
         "connection error",
@@ -310,23 +131,23 @@ def _is_retryable_transcription_error(err: Exception) -> bool:
 
 def _transcribe_via_httpx(file_path: str, language: str = "fr") -> str | None:
     """
-    nouveau: Fallback direct sur l'API Groq (OpenAI-compatible) en HTTP/1.1 via httpx.
+    Fallback direct sur l'API Groq (OpenAI-compatible) en HTTP/1.1 via httpx.
     Désactive HTTP/2 pour éviter certains soucis de handshake/proxy.
     """
-    if not GROQ_API_KEY:
+    if not settings.GROQ_API_KEY:
         logger.error("HTTPX fallback: GROQ_API_KEY manquante")
         return None
 
     url = "https://api.groq.com/openai/v1/audio/transcriptions"
-    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+    headers = {"Authorization": f"Bearer {settings.GROQ_API_KEY}"}
 
     # Multipart form-data — liste de tuples pour gérer les champs répétés
     data = [
-        ("model", WHISPER_MODEL),
+        ("model", AI_CONFIG['WHISPER_MODEL']),
         ("prompt", "Specify context or spelling"),
         ("response_format", "json"),
         ("language", language),
-        ("temperature", str(DEFAULT_TEMPERATURE)),
+        ("temperature", str(AI_CONFIG['DEFAULT_TEMPERATURE'])),
         ("timestamp_granularities[]", "word"),
         ("timestamp_granularities[]", "segment"),
     ]
@@ -365,9 +186,9 @@ def transcribe_audio(audio_data, language="fr"):
     logger.info(f"Transcription audio démarrée - {len(audio_data)} bytes")
     start_time = time.time()
 
-    # garde-fou si la clé est absente/mal configurée en préprod
-    if not GROQ_API_KEY:
-        logger.error("Échec transcription audio: GROQ_API_KEY manquante")
+    # Garde-fou si la clé est absente ou le client non initialisé
+    if not settings.GROQ_API_KEY or groq_client is None:
+        logger.error("Échec transcription audio: GROQ_API_KEY manquante ou client non initialisé")
         return None
 
     temp_file_path = None
@@ -380,21 +201,19 @@ def transcribe_audio(audio_data, language="fr"):
 
         last_error = None
 
-        # Système de retry avec backoff exponentiel
-        for attempt in range(1, TRANSCRIBE_MAX_RETRIES + 1):
+        # Système de retry avec backoff exponentiel et configuration centralisée
+        for attempt in range(1, AI_CONFIG['TRANSCRIBE_MAX_RETRIES'] + 1):
             try:
-                logger.info(
-                    f"Transcription tentative {attempt}/{TRANSCRIBE_MAX_RETRIES}"
-                )
+                logger.info(f"Transcription tentative {attempt}/{AI_CONFIG['TRANSCRIBE_MAX_RETRIES']}")
                 with open(temp_file_path, "rb") as audio_file:
                     transcription = groq_client.audio.transcriptions.create(
                         file=audio_file,
-                        model=WHISPER_MODEL,
+                        model=AI_CONFIG['WHISPER_MODEL'],
                         prompt="Specify context or spelling",
                         response_format="verbose_json",
                         timestamp_granularities=["word", "segment"],
                         language=language,
-                        temperature=DEFAULT_TEMPERATURE,
+                        temperature=AI_CONFIG['DEFAULT_TEMPERATURE'],
                     )
 
                 duration = time.time() - start_time
@@ -415,14 +234,9 @@ def transcribe_audio(audio_data, language="fr"):
 
             except Exception as e:
                 last_error = e
-                if (
-                    _is_retryable_transcription_error(e)
-                    and attempt < TRANSCRIBE_MAX_RETRIES
-                ):
-                    sleep_s = round(TRANSCRIBE_BACKOFF_BASE**attempt, 2)
-                    logger.warning(
-                        f"Transcription erreur réseau (retry dans {sleep_s}s): {e}"
-                    )
+                if _is_retryable_transcription_error(e) and attempt < AI_CONFIG['TRANSCRIBE_MAX_RETRIES']:
+                    sleep_s = round(AI_CONFIG['TRANSCRIBE_BACKOFF_BASE'] ** attempt, 2)
+                    logger.warning(f"Transcription erreur réseau (retry dans {sleep_s}s): {e}")
                     time.sleep(sleep_s)
                     continue
                 else:
@@ -452,7 +266,7 @@ def transcribe_audio(audio_data, language="fr"):
                 )
 
 
-# ---------- FALLBACK SYSTEM ----------
+# ---------- SYSTÈME DE FALLBACK ----------
 
 
 def safe_mistral_call(model, messages, operation="API call"):
@@ -467,22 +281,15 @@ def safe_mistral_call(model, messages, operation="API call"):
     Returns:
         Response de l'API ou None si tous les fallbacks échouent
     """
+    if mistral_client is None:
+        logger.error(f"[{operation}] Client Mistral non initialisé - MISTRAL_API_KEY manquante")
+        return None
+
     logger.info(f"[{operation}] Démarrage avec {model}")
     start_time = time.time()
 
-    # Hiérarchie de fallback par modèle
-    fallback_chain = {
-        "mistral-large-latest": [
-            "mistral-medium",
-            "mistral-small-latest",
-            "open-mistral-7b",
-        ],
-        "mistral-medium": ["mistral-small-latest", "open-mistral-7b"],
-        "mistral-small-latest": ["open-mistral-7b"],
-        "open-mistral-7b": [],
-    }
-
-    models_to_try = [model] + fallback_chain.get(model, [])
+    # Utilisation de la configuration centralisée pour les fallbacks
+    models_to_try = [model] + AI_CONFIG['FALLBACK_CHAINS'].get(model, [])
     logger.debug(f"[{operation}] Chaîne de fallback: {models_to_try}")
 
     for attempt, current_model in enumerate(models_to_try):
@@ -572,7 +379,7 @@ def analyze_emotions(text):
     ]
 
     response = safe_mistral_call(
-        model="mistral-small-latest",
+        model=AI_CONFIG['EMOTION_MODEL'],
         messages=messages,
         operation="Analyse émotionnelle",
     )
@@ -664,7 +471,7 @@ def interpret_dream(text):
     ]
 
     response = safe_mistral_call(
-        model="mistral-large-latest",
+        model=AI_CONFIG['INTERPRETATION_MODEL'],
         messages=messages,
         operation="Interprétation",
     )
@@ -694,7 +501,7 @@ def interpret_dream(text):
         return None
 
 
-# ---------- IMAGE ----------
+# ---------- GÉNÉRATION D'IMAGES ----------
 
 
 def generate_image_from_text(user, prompt_text, dream_instance):
@@ -702,6 +509,10 @@ def generate_image_from_text(user, prompt_text, dream_instance):
     Génère une image IA à partir du texte du rêve, via agent Mistral.
     Stocke l'image en base64 dans le modèle Dream.
     """
+    if mistral_client is None:
+        logger.error(f"Génération image impossible - MISTRAL_API_KEY manquante")
+        return False
+
     logger.info(f"Génération image pour rêve {dream_instance.id}")
     start_time = time.time()
 
@@ -710,7 +521,7 @@ def generate_image_from_text(user, prompt_text, dream_instance):
 
         try:
             agent = mistral_client.beta.agents.create(
-                model=IMAGE_GENERATION_MODEL,
+                model=AI_CONFIG['IMAGE_GENERATION_MODEL'],
                 name="Dream Image Agent",
                 instructions=system_instructions,
                 tools=[{"type": "image_generation"}],
@@ -1172,3 +983,79 @@ def get_emotions_timeline_filtered(
         timeline_list.append(entry)
 
     return timeline_list, list(all_emotions)
+
+# ---------- NORMALISATION DES LABELS ----------
+
+def _strip_accents(s: str) -> str:
+    """
+    Minuscule + suppression des accents + trim pour une comparaison robuste.
+    """
+    s = s.strip().lower()
+    s = unicodedata.normalize("NFKD", s)
+    return "".join(ch for ch in s if not unicodedata.combining(ch))
+
+
+def _first_value(val: Any) -> Any:
+    """
+    Prend la 1ère valeur si val est une liste/tuple, sinon renvoie val tel quel.
+    Évite que val=None devienne "" (affichable) plutôt que "None".
+    """
+    if val is None:
+        return ""
+    if isinstance(val, (list, tuple)):
+        return _first_value(val[0] if val else "")
+    return val
+
+
+def _to_str(val: Any) -> str:
+    """
+    Force en string propre:
+    - None -> ""
+    - bytes -> décodage utf-8 best effort
+    - autres -> str(val)
+    """
+    if val is None:
+        return ""
+    if isinstance(val, bytes):
+        try:
+            return val.decode("utf-8", errors="replace")
+        except Exception:
+            return ""
+    return val if isinstance(val, str) else str(val)
+
+
+# Pré-calcul de mappings normalisés (insensibles aux accents et à la casse)
+_EMO_NORM = {_strip_accents(str(k)): v for k, v in EMOTION_LABELS.items()}
+_DREAM_NORM = {_strip_accents(str(k)): v for k, v in DREAM_TYPE_LABELS.items()}
+
+
+def _normalize_label(val: Any, mapping: Optional[Mapping[str, str]] = None) -> str:
+    """
+    Normalise un label pour l'affichage/API:
+    - Accepte clé brute, liste/tuple (on prend le 1er élément)
+    - Trim + lookup insensible casse/accents dans le mapping
+    - Fallback: capitalize() si clé inconnue
+    """
+    raw = _to_str(_first_value(val)).strip()
+    if not raw:
+        return ""
+    if mapping is not None:
+        # Utilise les tables pré-calculées si on reconnait le mapping
+        if mapping is EMOTION_LABELS:
+            return _EMO_NORM.get(_strip_accents(raw), raw.capitalize())
+        if mapping is DREAM_TYPE_LABELS:
+            return _DREAM_NORM.get(_strip_accents(raw), raw.capitalize())
+        # Fallback générique (rare) : normalise à la volée
+        norm_map = {_strip_accents(str(k)): v for k, v in mapping.items()}
+        return norm_map.get(_strip_accents(raw), raw.capitalize())
+    return raw.capitalize()
+
+
+def format_emotion_label(val: Any) -> str:
+    """Ex: 'Joïe', 'joie', 'JOIE', 'joie ' -> 'Joie' (via EMOTION_LABELS si présent)"""
+    return _normalize_label(val, EMOTION_LABELS)
+
+
+def format_dream_type_label(val: Any) -> str:
+    """Ex: 'CAUCHEMAR', 'cauchemar', 'Cauchemàr' -> 'Cauchemar' (via DREAM_TYPE_LABELS si présent)"""
+    return _normalize_label(val, DREAM_TYPE_LABELS)
