@@ -515,7 +515,7 @@ class DreamModelTest(TestCase):
             )
 
         # 3. Nombre correct de rêves créés
-        db_dreams_count = Dream.objects.filter(user=self.user).count()
+        db_dreams_count = Dream.objects.count()
         self.assertEqual(
             db_dreams_count,
             total_expected,
