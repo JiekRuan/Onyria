@@ -16,6 +16,8 @@ on:
 
 env:
   PYTHON_VERSION: "3.11"
+  GROQ_API_KEY: "test-secret-key-for-ci"
+  MISTRAL_API_KEY: "test-secret-key-for-ci"
 
 jobs:
   models-and-utils:
@@ -75,6 +77,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip

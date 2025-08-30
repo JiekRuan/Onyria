@@ -472,6 +472,9 @@ def safe_mistral_call(model, messages, operation="API call"):
 
 def analyze_emotions(text):
     """Renvoie le score des émotions + l'émotion dominante avec fallback"""
+    if not text:  # rajouter une vérification pour éviter les type None errors
+        logger.warning("Texte vide reçu pour analyse émotionnelle")
+        return None, None
     logger.info(f"Analyse émotionnelle démarrée - {len(text)} caractères")
 
     system_prompt = read_file("context_emotion.txt")
