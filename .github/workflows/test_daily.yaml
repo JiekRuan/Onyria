@@ -63,8 +63,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Run views tests
+        working-directory: DreamProject
         run: |
-          cd DreamProject
           python manage.py test diary.tests.test_views --verbosity=2 --parallel
 
   ai-tests:
@@ -86,8 +86,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Run AI tests
+        working-directory: DreamProject
         run: |
-          cd DreamProject
           python manage.py test diary.tests.test_ai_functions --verbosity=2 --parallel
 
   quality-metrics:
