@@ -1,5 +1,6 @@
 import os
 import json
+import sys
 import re
 import math
 import time
@@ -472,6 +473,9 @@ def safe_mistral_call(model, messages, operation="API call"):
 
 def analyze_emotions(text):
     """Renvoie le score des émotions + l'émotion dominante avec fallback"""
+    if not text:  # rajouter une vérification pour éviter les type None errors
+        logger.warning("Texte vide reçu pour analyse émotionnelle")
+        return None, None
     logger.info(f"Analyse émotionnelle démarrée - {len(text)} caractères")
 
     system_prompt = read_file("context_emotion.txt")
@@ -687,30 +691,34 @@ def generate_image_from_text(user, prompt_text, dream_instance):
 
 # Configuration BERTopic avec paramètres ajustés pour petits datasets
 try:
-    # Modèle d'embeddings optimisé pour le français
-    embedding_model = SentenceTransformer(
-        'paraphrase-multilingual-MiniLM-L12-v2'
-    )
+    if 'test' in sys.argv or getattr(settings, 'TESTING', False):
+        BERTOPIC_AVAILABLE = False
+        logger.info("BERTopic désactivé en mode test")
+    else:
+        # Modèle d'embeddings optimisé pour le français
+        embedding_model = SentenceTransformer(
+            'paraphrase-multilingual-MiniLM-L12-v2'
+        )
 
-    # UMAP avec paramètres pour petits datasets
-    umap_model = UMAP(
-        n_neighbors=2,  # Très petit pour gérer peu de documents
-        n_components=2,  # Réduction à 2D
-        min_dist=0.0,
-        metric='cosine',
-        random_state=42,
-    )
+        # UMAP avec paramètres pour petits datasets
+        umap_model = UMAP(
+            n_neighbors=2,  # Très petit pour gérer peu de documents
+            n_components=2,  # Réduction à 2D
+            min_dist=0.0,
+            metric='cosine',
+            random_state=42,
+        )
 
-    # HDBSCAN avec paramètres très permissifs
-    hdbscan_model = HDBSCAN(
-        min_cluster_size=2,  # Minimum 2 rêves par cluster
-        min_samples=1,  # Très permissif
-        metric='euclidean',
-        cluster_selection_method='eom',
-    )
+        # HDBSCAN avec paramètres très permissifs
+        hdbscan_model = HDBSCAN(
+            min_cluster_size=2,  # Minimum 2 rêves par cluster
+            min_samples=1,  # Très permissif
+            metric='euclidean',
+            cluster_selection_method='eom',
+        )
 
-    BERTOPIC_AVAILABLE = True
-    logger.info("BERTopic configuré pour petits datasets")
+        BERTOPIC_AVAILABLE = True
+        logger.info("BERTopic configuré pour petits datasets")
 
 except ImportError:
     logger.warning("BERTopic non disponible")
