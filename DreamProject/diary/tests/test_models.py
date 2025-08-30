@@ -27,6 +27,7 @@ from ..models import Dream
 
 User = get_user_model()
 
+TEST_USER_PASSWORD = os.environ.get('TEST_PASSWORD', 'django_test_secure_2024')
 
 class DreamModelTest(TestCase):
     """
@@ -47,7 +48,7 @@ class DreamModelTest(TestCase):
         self.user = User.objects.create_user(
             email='test@example.com',
             username='testuser',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
     
     def test_create_basic_dream(self):
@@ -633,7 +634,7 @@ class DreamModelImageBase64Test(TestCase):
         self.user = User.objects.create_user(
             email='test_images@example.com',
             username='testuser_images',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
 
     def test_image_base64_storage(self):
@@ -912,7 +913,7 @@ class DreamModelPerformanceTest(TestCase):
         self.user = User.objects.create_user(
             email='test_perf@example.com',
             username='testuser_perf',
-            password='testpass123'
+            password=TEST_USER_PASSWORD
         )
 
     def test_bulk_dream_creation_performance(self):
