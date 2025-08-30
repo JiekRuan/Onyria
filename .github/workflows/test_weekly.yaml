@@ -112,6 +112,15 @@ jobs:
         run: |
           echo "Tests de sécurité..."
           python manage.py test diary.tests.test_security --verbosity=2 --keepdb
+
+      - name: Clean test environment
+        working-directory: DreamProject
+        run: |
+          echo "Nettoyage de l'environnement de test..."
+          # S'assurer que la base est propre
+          python manage.py flush --noinput || true
+          # Créer les tables si nécessaire
+          python manage.py migrate --noinput || true
       
       - name: Coverage Analysis (if requested)
         if: github.event.inputs.full_coverage == 'true' || github.event.inputs.full_coverage == ''
