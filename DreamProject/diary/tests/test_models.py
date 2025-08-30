@@ -22,7 +22,6 @@ import threading
 import unittest
 import os
 from collections import defaultdict
-
 from ..models import Dream
 
 User = get_user_model()
@@ -439,9 +438,6 @@ class DreamModelTest(TestCase):
         IMPORTANT: Ce test nécessite PostgreSQL pour fonctionner correctement.
         Il est automatiquement skippé en développement avec SQLite.
         """
-        import threading
-        import time
-        from collections import defaultdict
         
         # Configuration du test
         num_threads = 5
@@ -461,13 +457,20 @@ class DreamModelTest(TestCase):
                 thread_id: Identifiant unique du thread
             """
             thread_dreams = []
+            thread_user = None
             
             try:
+                with transaction.atomic():
+                thread_user = User.objects.create_user(
+                    email=f'thread_{thread_id}@test.com',
+                    username=f'thread_user_{thread_id}',
+                    password=TEST_USER_PASSWORD
+                )
                 for i in range(dreams_per_thread):
                     # Utiliser une transaction atomique pour chaque création
                     with transaction.atomic():
                         dream = Dream.objects.create(
-                            user=self.user,
+                            user=thread_user,
                             transcription=f"Rêve concurrent thread-{thread_id} rêve-{i}",
                             dream_type="rêve" if i % 2 == 0 else "cauchemar",
                             dominant_emotion="joie" if i % 3 == 0 else "tristesse",
